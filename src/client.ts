@@ -38,6 +38,7 @@ const ENDPOINTS = {
   login: "passport/login",
   siteList: "power_service/v1/site/get_site_list",
   sceneInfo: "power_service/v1/site/get_scen_info",
+  mqttInfo: "power_service/v1/app/compatible/get_user_mqtt_info",
 } as const;
 
 const API_PUBLIC_KEY_HEX =
@@ -61,6 +62,21 @@ export interface DeviceStatus {
 
 export interface SiteInfo {
   site_id?: string;
+}
+
+export interface SiteDevice {
+  siteId: string;
+  deviceSn: string;
+  productCode: string;
+}
+
+export interface MqttInfo {
+  brokerHost: string;
+  brokerPort: number;
+  clientId: string;
+  caCert: string;
+  clientCert: string;
+  clientKey: string;
 }
 
 export class AnkerSolixClient {
@@ -107,6 +123,42 @@ export class AnkerSolixClient {
 
   public async getSceneInfo(siteId: string): Promise<JsonObject> {
     return this.request<JsonObject>(ENDPOINTS.sceneInfo, { site_id: siteId });
+  }
+
+  public async getSiteDevices(): Promise<SiteDevice[]> {
+    const sites = await this.getSiteList();
+    const devices: SiteDevice[] = [];
+    for (const site of sites) {
+      const siteId = site.site_id;
+      if (!siteId) continue;
+      const scene = await this.getSceneInfo(siteId);
+      const solarbankInfo = asObject(scene.solarbank_info);
+      const solarbankList = Array.isArray(solarbankInfo.solarbank_list)
+        ? (solarbankInfo.solarbank_list as JsonObject[])
+        : [];
+      for (const device of solarbankList) {
+        const deviceSn = String(device.device_sn ?? "");
+        const productCode = String(device.product_code ?? "");
+        if (deviceSn) {
+          devices.push({ siteId, deviceSn, productCode });
+        }
+      }
+    }
+    return devices;
+  }
+
+  public async getMqttInfo(): Promise<MqttInfo> {
+    const data = await this.request<JsonObject>(ENDPOINTS.mqttInfo, {});
+    const brokerHost = String(data.broker_host ?? data.host ?? "");
+    const brokerPort = Number(data.broker_port ?? data.port ?? 8883);
+    const clientId = String(data.client_id ?? data.clientId ?? "");
+    const caCert = String(data.ca_cert ?? data.caCert ?? "");
+    const clientCert = String(data.client_cert ?? data.clientCert ?? "");
+    const clientKey = String(data.client_private_key ?? data.client_key ?? data.clientKey ?? "");
+    if (!brokerHost || !caCert || !clientCert || !clientKey) {
+      throw new Error("Incomplete MQTT credentials returned by API.");
+    }
+    return { brokerHost, brokerPort, clientId, caCert, clientCert, clientKey };
   }
 
   private async request<T extends JsonObject>(endpoint: string, body: JsonObject): Promise<T> {
