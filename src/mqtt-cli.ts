@@ -3,6 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { connect } from "mqtt";
 import { AnkerSolixClient } from "./client.js";
+import { parseMessage } from "./mqtt-packet.js";
+import { getFieldMap } from "./mqttmap.js";
 
 async function main(): Promise<void> {
   const email = process.env.ANKER_EMAIL;
@@ -73,13 +75,40 @@ async function main(): Promise<void> {
   });
 
   mqttClient.on("message", (topic: string, payload: Buffer) => {
-    let parsed: unknown;
+    // Try to parse the Anker Solix binary envelope.
+    let line: string;
     try {
-      parsed = JSON.parse(payload.toString("utf8"));
+      const envelope = JSON.parse(payload.toString("utf8")) as {
+        head?: Record<string, unknown>;
+        payload?: string;
+      };
+      const innerPayload = envelope.payload ? (JSON.parse(envelope.payload) as { pn?: string }) : {};
+      const pn = innerPayload.pn ?? "";
+      // Extract message type from the topic: …/<pn>/<sn>/<msgtype>/ or fall back
+      // to looking it up after parsing the packet header.
+      const fieldMap = pn ? getFieldMap(pn, "0405") : undefined;
+      const result = parseMessage(payload, fieldMap);
+      const decoded = result.packet?.decoded;
+      line = JSON.stringify({
+        topic,
+        pn: result.pn,
+        sn: result.sn,
+        msgType: result.packet?.header.msgType,
+        checksumOk: result.packet?.checksumOk,
+        decoded: decoded && Object.keys(decoded).length > 0 ? decoded : undefined,
+        jsonData: result.jsonData ?? undefined,
+        head: result.head,
+      });
     } catch {
-      parsed = payload.toString("base64");
+      // Fall back to raw output for non-envelope messages.
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(payload.toString("utf8"));
+      } catch {
+        parsed = payload.toString("base64");
+      }
+      line = JSON.stringify({ topic, payload: parsed });
     }
-    const line = JSON.stringify({ topic, payload: parsed });
     process.stdout.write(`${line}\n`);
   });
 

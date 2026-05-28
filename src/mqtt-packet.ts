@@ -510,9 +510,7 @@ function decodeVar(data: Buffer, desc: FieldDescriptor): Record<string, unknown>
     }
     if (name.includes("version") || name.startsWith("sw_")) {
       return {
-        [name]: Array.isArray(value)
-          ? value.join(".")
-          : String(value).split("").join("."),
+        [name]: Array.isArray(value) ? value.join(".") : String(value),
       };
     }
   }
@@ -550,7 +548,7 @@ function decodeBin(data: Buffer, desc: FieldDescriptor): Record<string, unknown>
       }
     } else {
       // sub-field descriptor — extract at absolute position
-      Object.assign(result, extractSubField(data, pos, entry));
+      Object.assign(result, extractSubField(data, pos, entry).decoded);
     }
   }
 
@@ -594,7 +592,7 @@ function decodeStrbDict(
         }
       }
     } else {
-      Object.assign(result, extractSubField(data, pos, entry));
+      Object.assign(result, extractSubField(data, pos, entry).decoded);
     }
   }
   return result;

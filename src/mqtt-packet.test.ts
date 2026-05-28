@@ -79,7 +79,10 @@ test("verifyChecksum rejects a corrupted packet", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test("parseHeader extracts msgType and direction", () => {
-  const pkt = buildPacket([0x04, 0x05]);
+  // Include a field byte so the checksum lands at position 10+, not position 9
+  // (otherwise the checksum value might not be in 0xA0–0xA9 and gets mis-read
+  // as an increment byte).
+  const pkt = buildPacket([0x04, 0x05], [0xa0, 0x01, 0x00]);
   const { header, fieldsStart } = parseHeader(pkt);
   assert.equal(header.msgType, "0405");
   assert.equal(header.direction, "receive");
