@@ -8,6 +8,7 @@
     "test": "node --test dist/**/*.test.js",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/cli.js",
+    "start:mqtt": "node dist/mqtt-cli.js",
     "dev": "tsx src/cli.ts",
     "mqtt-cli": "tsx src/mqtt-cli.ts"
   },
@@ -29,6 +30,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "mqtt": "^5.15.1"
   }
 }

@@ -9,13 +9,17 @@ npm install
 npm run build
 ```
 
+Create a `.env` file in the project root:
+
+```dotenv
+ANKER_EMAIL=you@example.com
+ANKER_PASSWORD=your-password
+ANKER_COUNTRY_ID=DE
+```
+
+`ANKER_COUNTRY_ID` is optional (defaults to `DE`).
+
 ## Run
-
-Set environment variables:
-
-- `ANKER_EMAIL`
-- `ANKER_PASSWORD`
-- `ANKER_COUNTRY_ID` (optional, default: `DE`)
 
 Then run:
 

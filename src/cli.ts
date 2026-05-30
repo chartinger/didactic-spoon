@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { AnkerSolixClient } from "./client.js";
 
 function parseArgs(argv: string[]): {
