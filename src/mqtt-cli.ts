@@ -64,7 +64,7 @@ async function main(): Promise<void> {
 
     for (const device of devices) {
       const productCode = device.productCode || "+";
-      const topic = `dt/anker_power/${productCode}/${device.deviceSn}/`;
+      const topic = `dt/anker_power/${productCode}/${device.deviceSn}/#`;
       mqttClient.subscribe(topic, (err) => {
         if (err) {
           process.stderr.write(`Subscribe error for ${topic}: ${String(err)}\n`);
