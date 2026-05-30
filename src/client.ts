@@ -38,7 +38,7 @@ const ENDPOINTS = {
   login: "passport/login",
   siteList: "power_service/v1/site/get_site_list",
   sceneInfo: "power_service/v1/site/get_scen_info",
-  mqttInfo: "power_service/v1/app/compatible/get_user_mqtt_info",
+  mqttInfo: "app/devicemanage/get_user_mqtt_info",
 } as const;
 
 const API_PUBLIC_KEY_HEX =
@@ -149,12 +149,30 @@ export class AnkerSolixClient {
 
   public async getMqttInfo(): Promise<MqttInfo> {
     const data = await this.request<JsonObject>(ENDPOINTS.mqttInfo, {});
-    const brokerHost = String(data.broker_host ?? data.host ?? "");
-    const brokerPort = Number(data.broker_port ?? data.port ?? 8883);
-    const clientId = String(data.client_id ?? data.clientId ?? "");
-    const caCert = String(data.ca_cert ?? data.caCert ?? "");
-    const clientCert = String(data.client_cert ?? data.clientCert ?? "");
-    const clientKey = String(data.client_private_key ?? data.client_key ?? data.clientKey ?? "");
+    const endpointAddr = String(data.endpoint_addr ?? data.broker_host ?? data.host ?? "").trim();
+    const endpointUrl =
+      endpointAddr.startsWith("mqtt://") || endpointAddr.startsWith("mqtts://")
+        ? endpointAddr
+        : endpointAddr
+          ? `mqtts://${endpointAddr}`
+          : "";
+    let brokerHost = "";
+    let brokerPort = Number(data.broker_port ?? data.port ?? 8883);
+    if (endpointUrl) {
+      try {
+        const parsed = new URL(endpointUrl);
+        brokerHost = parsed.hostname;
+        brokerPort = parsed.port ? Number(parsed.port) : brokerPort;
+      } catch {
+        brokerHost = endpointAddr;
+      }
+    }
+    const clientId = String(data.thing_name ?? data.client_id ?? data.clientId ?? "");
+    const caCert = String(data.aws_root_ca1_pem ?? data.ca_cert ?? data.caCert ?? "");
+    const clientCert = String(data.certificate_pem ?? data.client_cert ?? data.clientCert ?? "");
+    const clientKey = String(
+      data.private_key ?? data.client_private_key ?? data.client_key ?? data.clientKey ?? "",
+    );
     if (!brokerHost || !caCert || !clientCert || !clientKey) {
       throw new Error("Incomplete MQTT credentials returned by API.");
     }
@@ -172,7 +190,7 @@ export class AnkerSolixClient {
       body: JSON.stringify(body),
     });
 
-    const json = (await response.json()) as JsonObject;
+    const json = await this.parseJsonResponse(response, endpoint);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${JSON.stringify(json)}`);
     }
@@ -202,7 +220,7 @@ export class AnkerSolixClient {
       headers: this.headers(),
       body: JSON.stringify(loginBody),
     });
-    const json = (await response.json()) as JsonObject;
+    const json = await this.parseJsonResponse(response, ENDPOINTS.login);
     if (!response.ok || (json.code as number | undefined) !== 0) {
       throw new Error(`Login failed: ${JSON.stringify(json)}`);
     }
@@ -239,6 +257,20 @@ export class AnkerSolixClient {
     return Buffer.concat([cipher.update(password, "utf8"), cipher.final()]).toString(
       "base64",
     );
+  }
+
+  private async parseJsonResponse(response: Response, endpoint: string): Promise<JsonObject> {
+    const raw = await response.text();
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return asObject(parsed);
+    } catch {
+      const preview = raw.replace(/\s+/g, " ").trim().slice(0, 200);
+      const body = preview.length > 0 ? preview : "<empty body>";
+      throw new Error(
+        `Invalid JSON response from ${endpoint} (HTTP ${response.status}): ${body}`,
+      );
+    }
   }
 }
 
