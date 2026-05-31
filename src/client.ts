@@ -82,6 +82,7 @@ export class AnkerSolixClient {
   private readonly countryId: string;
   private readonly apiBase: string;
   private readonly cryptoMaterialPromise: Promise<CryptoMaterial>;
+  private refreshAuthPromise: Promise<void> | null = null;
 
   private token: string | null = null;
   private gtoken: string | null = null;
@@ -174,9 +175,13 @@ export class AnkerSolixClient {
     return { brokerHost, brokerPort, clientId, caCert, clientCert, clientKey };
   }
 
-  private async request<T extends JsonObject>(endpoint: string, body: JsonObject): Promise<T> {
-    if (endpoint !== ENDPOINTS.login && !this.token) {
-      await this.authenticate();
+  private async request<T extends JsonObject>(
+    endpoint: string,
+    body: JsonObject,
+    retriedAfterAuthFailure = false,
+  ): Promise<T> {
+    if (endpoint !== ENDPOINTS.login) {
+      await this.ensureAuthenticated();
     }
 
     const response = await fetch(`${this.apiBase}/${endpoint}`, {
@@ -186,6 +191,17 @@ export class AnkerSolixClient {
     });
 
     const json = await this.parseJsonResponse(response, endpoint);
+
+    if (
+      endpoint !== ENDPOINTS.login &&
+      !retriedAfterAuthFailure &&
+      this.isAuthenticationFailure(response.status, json)
+    ) {
+      this.clearSession();
+      await this.ensureAuthenticated();
+      return this.request<T>(endpoint, body, true);
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${JSON.stringify(json)}`);
     }
@@ -196,6 +212,40 @@ export class AnkerSolixClient {
     }
 
     return (json.data ?? {}) as T;
+  }
+
+  private async ensureAuthenticated(): Promise<void> {
+    if (this.token && this.gtoken) {
+      return;
+    }
+    if (!this.refreshAuthPromise) {
+      this.refreshAuthPromise = this.authenticate().finally(() => {
+        this.refreshAuthPromise = null;
+      });
+    }
+    await this.refreshAuthPromise;
+  }
+
+  private clearSession(): void {
+    this.token = null;
+    this.gtoken = null;
+  }
+
+  private isAuthenticationFailure(statusCode: number, json: JsonObject): boolean {
+    if (statusCode === 401 || statusCode === 403) {
+      return true;
+    }
+
+    const code = json.code;
+    if (typeof code === "number" && (code === 401 || code === 403)) {
+      return true;
+    }
+
+    const message = String(json.msg ?? "").toLowerCase();
+    if (!message) {
+      return false;
+    }
+    return /auth|token|login|session|expire|expired|unauthorized|forbidden/.test(message);
   }
 
   private async authenticate(): Promise<void> {
