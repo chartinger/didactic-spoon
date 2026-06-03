@@ -33,6 +33,7 @@
     "vitest": "^4.1.8"
   },
   "dependencies": {
+    "@lab759/solix-api": "workspace:",
     "dotenv": "^17.2.3",
     "mqtt": "^5.15.1"
   }

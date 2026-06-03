@@ -26,6 +26,9 @@ importers:
 
   .:
     dependencies:
+      '@lab759/solix-api':
+        specifier: 'workspace:'
+        version: link:packages/solix-api
       dotenv:
         specifier: ^17.2.3
         version: 17.4.2
@@ -47,6 +50,31 @@ importers:
         version: 4.1.8(@types/node@25.9.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(tsx@4.22.4))
 
   packages/solix-api:
+    devDependencies:
+      '@arethetypeswrong/core':
+        specifier: 'catalog:'
+        version: 0.18.3
+      publint:
+        specifier: 'catalog:'
+        version: 0.3.21
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.1(@arethetypeswrong/core@0.18.3)(publint@0.3.21)(tsx@4.22.4)(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(tsx@4.22.4))
+
+  packages/solix-mqtt:
+    dependencies:
+      '@lab759/solix-api':
+        specifier: 'workspace:'
+        version: link:../solix-api
+      mqtt:
+        specifier: ^5.15.1
+        version: 5.15.1
     devDependencies:
       '@arethetypeswrong/core':
         specifier: 'catalog:'

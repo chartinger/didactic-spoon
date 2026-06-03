@@ -3,7 +3,7 @@ import { writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { connect } from "mqtt";
-import { AnkerSolixClient } from "./client.js";
+import { AnkerSolixClient } from "@lab759/solix-api";
 import { parseMessage } from "./mqtt-packet.js";
 import { getFieldMap } from "./mqttmap.js";
 

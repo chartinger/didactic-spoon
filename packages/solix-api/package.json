@@ -1,6 +1,6 @@
 {
   "name": "@lab759/solix-api",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "private": true,
   "types": "./dist/index.d.cts",
