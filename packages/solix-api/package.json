@@ -13,7 +13,7 @@
   "sideEffects": false,
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "devDependencies": {
     "@arethetypeswrong/core": "catalog:",
