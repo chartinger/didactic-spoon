@@ -444,6 +444,11 @@ const A17C1_0407: FieldMap = {
   a5: { name: "charging_status" },
 };
 
+const A17C5_0407: FieldMap = {
+  ...COMMON_0407,
+  a1: { name: "unknown_a1" },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Master map: SOLIXMQTTMAP[modelPN][msgTypeHex]
 // ─────────────────────────────────────────────────────────────────────────────
@@ -499,7 +504,7 @@ export const SOLIXMQTTMAP: Record<string, Record<string, FieldMap>> = {
   // Solarbank 3
   A17C5: {
     "0405": A17C5_0405,
-    "0407": A17C1_0407,
+    "0407": A17C5_0407,
     "0408": A17C5_0408,
   },
 };

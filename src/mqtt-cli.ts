@@ -6,6 +6,8 @@ import { parseEnvelope, parseHeader, parseMessage } from "./mqtt-packet.js";
 import { getFieldMap } from "./mqttmap.js";
 
 async function main(): Promise<void> {
+  const showRaw = process.argv.includes("--raw");
+
   const email = process.env.ANKER_EMAIL;
   const password = process.env.ANKER_PASSWORD;
   const countryId = process.env.ANKER_COUNTRY_ID ?? "DE";
@@ -68,23 +70,21 @@ async function main(): Promise<void> {
       // Step 2: parse the binary packet header to get the actual msgType,
       // then look up the correct field map for this device + message type.
       let fieldMap: FieldMap | undefined;
-      console.debug(`Received message with pn=${pn}`);
       if (pn && binaryData) {
         try {
           const { header } = parseHeader(binaryData);
           fieldMap = getFieldMap(pn, header.msgType);
         } catch {
           // If header parsing fails, fall back to the default 0405 map
-          console.warn(`Failed to parse header for pn=${pn}, falling back to default field map.`);
           fieldMap = getFieldMap(pn, "0405");
         }
       }
       const result = parseMessage(payload, fieldMap);
       const decoded = result.packet?.decoded;
 
-      // Include raw field info for debugging / reverse engineering
+      // Include raw field info only with --raw flag (debugging / reverse engineering)
       let rawFields: Record<string, { id: string; type: string; hex: string }> | undefined;
-      if (result.packet?.rawFields && result.packet.rawFields.size > 0) {
+      if (showRaw && result.packet?.rawFields && result.packet.rawFields.size > 0) {
         rawFields = {};
         for (const [id, rf] of result.packet.rawFields) {
           const key = id.toString(16).padStart(2, "0");
