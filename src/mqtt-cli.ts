@@ -1,7 +1,8 @@
 import "dotenv/config";
 import { connect } from "mqtt";
 import { AnkerSolixClient } from "@lab759/solix-api";
-import { parseMessage } from "./mqtt-packet.js";
+import type { FieldMap } from "./mqtt-packet.js";
+import { parseEnvelope, parseHeader, parseMessage } from "./mqtt-packet.js";
 import { getFieldMap } from "./mqttmap.js";
 
 async function main(): Promise<void> {
@@ -61,17 +62,40 @@ async function main(): Promise<void> {
     // Try to parse the Anker Solix binary envelope.
     let line: string;
     try {
-      const envelope = JSON.parse(payload.toString("utf8")) as {
-        head?: Record<string, unknown>;
-        payload?: string;
-      };
-      const innerPayload = envelope.payload ? (JSON.parse(envelope.payload) as { pn?: string }) : {};
-      const pn = innerPayload.pn ?? "";
-      // Extract message type from the topic: …/<pn>/<sn>/<msgtype>/ or fall back
-      // to looking it up after parsing the packet header.
-      const fieldMap = pn ? getFieldMap(pn, "0405") : undefined;
+      // Step 1: parse the outer envelope to extract pn and binary data
+      const { head, pn, binaryData } = parseEnvelope(payload);
+
+      // Step 2: parse the binary packet header to get the actual msgType,
+      // then look up the correct field map for this device + message type.
+      let fieldMap: FieldMap | undefined;
+      console.debug(`Received message with pn=${pn}`);
+      if (pn && binaryData) {
+        try {
+          const { header } = parseHeader(binaryData);
+          fieldMap = getFieldMap(pn, header.msgType);
+        } catch {
+          // If header parsing fails, fall back to the default 0405 map
+          console.warn(`Failed to parse header for pn=${pn}, falling back to default field map.`);
+          fieldMap = getFieldMap(pn, "0405");
+        }
+      }
       const result = parseMessage(payload, fieldMap);
       const decoded = result.packet?.decoded;
+
+      // Include raw field info for debugging / reverse engineering
+      let rawFields: Record<string, { id: string; type: string; hex: string }> | undefined;
+      if (result.packet?.rawFields && result.packet.rawFields.size > 0) {
+        rawFields = {};
+        for (const [id, rf] of result.packet.rawFields) {
+          const key = id.toString(16).padStart(2, "0");
+          rawFields[key] = {
+            id: key,
+            type: rf.type !== undefined ? `0x${rf.type.toString(16).padStart(2, "0")}` : "??",
+            hex: rf.data.toString("hex"),
+          };
+        }
+      }
+
       line = JSON.stringify({
         topic,
         pn: result.pn,
@@ -79,6 +103,7 @@ async function main(): Promise<void> {
         msgType: result.packet?.header.msgType,
         checksumOk: result.packet?.checksumOk,
         decoded: decoded && Object.keys(decoded).length > 0 ? decoded : undefined,
+        rawFields,
         jsonData: result.jsonData ?? undefined,
         head: result.head,
       });
