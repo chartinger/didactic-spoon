@@ -170,6 +170,12 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
     mqttClient.on("close", () => {
       process.stderr.write("Connection closed.\n");
     });
+
+    mqttClient.on("reconnect", () => {
+      console.error("Skipping MQTT reconnect - closing client.");
+      mqttClient.end();
+    });
+
   }
 
   public disconnect(): void {
