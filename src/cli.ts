@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { AnkerSolixClient, type AnkerClientOptions, type SiteDevice, type SiteInfo } from "@lab759/solix-api";
-import { loadAuthInfo } from "./auth.js";
+import { loadAuthInfo, saveAuthTokensToCache } from "./auth.js";
 
 export interface CliOptions {
   siteId?: string;
@@ -95,7 +95,10 @@ export function buildSiteDeviceListing(
 }
 
 async function main(): Promise<void> {
-  const apiClientOptions: AnkerClientOptions = loadAuthInfo();
+  const apiClientOptions: AnkerClientOptions = {
+    ...loadAuthInfo(),
+    onAuthTokens: (tokens) => saveAuthTokensToCache(tokens),
+  };
 
   const { siteId, deviceSn, list, watch, interval } = parseArgs(process.argv.slice(2));
   const client = new AnkerSolixClient(apiClientOptions);

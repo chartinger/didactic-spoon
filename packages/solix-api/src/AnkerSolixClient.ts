@@ -48,7 +48,9 @@ export interface AnkerClientOptions {
   password: string;
   countryId: string;
   token?: string | null;
-  gtoken?: string | null
+  gtoken?: string | null;
+  /** Called whenever new auth tokens are obtained (e.g. after login or re-auth). */
+  onAuthTokens?: (tokens: { token: string; gtoken: string }) => void;
 }
 
 export interface DeviceStatus {
@@ -88,6 +90,7 @@ export class AnkerSolixClient {
   private readonly countryId: string;
   private readonly apiBase: string;
   private readonly cryptoMaterialPromise: Promise<CryptoMaterial>;
+  private readonly onAuthTokens?: (tokens: { token: string; gtoken: string }) => void;
   private refreshAuthPromise: Promise<void> | null = null;
 
   private token: string | null = null;
@@ -103,6 +106,7 @@ export class AnkerSolixClient {
     this.cryptoMaterialPromise = createCryptoMaterial();
     this.token = options.token ?? null;
     this.gtoken = options.gtoken ?? null;
+    this.onAuthTokens = options.onAuthTokens;
   }
 
   public async getCurrentStatus(siteId?: string, deviceSn?: string): Promise<DeviceStatus> {
@@ -293,11 +297,12 @@ export class AnkerSolixClient {
     this.token = String(data.auth_token ?? "");
     this.gtoken = userId ? md5Hex(userId) : null;
 
-    console.log({ token: this.token, gtoken: this.gtoken });
-
     if (!this.token || !this.gtoken) {
       throw new Error("Login succeeded but token data is missing.");
     }
+
+    this.onAuthTokens?.({ token: this.token, gtoken: this.gtoken });
+    console.log({ token: this.token, gtoken: this.gtoken });
   }
 
   private headers(): Record<string, string> {

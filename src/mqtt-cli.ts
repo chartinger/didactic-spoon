@@ -1,13 +1,15 @@
 import { AnkerSolixClient, type AnkerClientOptions, type DeviceStatus } from "@lab759/solix-api";
 import { AnkerSolixMqttClient } from "@lab759/solix-mqtt";
 import "dotenv/config";
-import { loadAuthInfo } from "./auth.js";
+import { loadAuthInfo, saveAuthTokensToCache } from "./auth.js";
 
 async function main(): Promise<void> {
   const showRaw = process.argv.includes("--raw");
 
-  const apiClientOptions: AnkerClientOptions = loadAuthInfo();
-
+  const apiClientOptions: AnkerClientOptions = {
+    ...loadAuthInfo(),
+    onAuthTokens: (tokens) => saveAuthTokensToCache(tokens),
+  };
 
   const client = new AnkerSolixClient(apiClientOptions);
   const mqttClient = new AnkerSolixMqttClient(client, { raw: showRaw });
