@@ -90,7 +90,7 @@ export class AnkerSolixClient {
   private readonly countryId: string;
   private readonly apiBase: string;
   private readonly cryptoMaterialPromise: Promise<CryptoMaterial>;
-  private readonly onAuthTokens?: (tokens: { token: string; gtoken: string }) => void;
+  private readonly onAuthTokens?: ((tokens: { token: string; gtoken: string }) => void) | undefined;
   private refreshAuthPromise: Promise<void> | null = null;
 
   private token: string | null = null;

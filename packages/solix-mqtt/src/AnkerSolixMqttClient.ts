@@ -18,17 +18,17 @@ export interface MqttMessageEvent {
   /** Device serial number. */
   sn: string;
   /** 2-byte message type as lowercase hex (e.g. "0405"). */
-  msgType?: string;
+  msgType?: string | undefined;
   /** Whether the XOR checksum verified correctly. */
-  checksumOk?: boolean;
+  checksumOk?: boolean | undefined;
   /** Semantically decoded key-value pairs (requires a field map for the device). */
-  decoded?: Record<string, unknown>;
+  decoded?: Record<string, unknown> | undefined;
   /** Raw binary fields (only included when `raw: true` option is set). */
-  rawFields?: Record<string, { id: string; type: string; hex: string }>;
+  rawFields?: Record<string, { id: string; type: string; hex: string }> | undefined;
   /** Parsed JSON payload for X1/HES devices (non-binary protocol). */
-  jsonData?: unknown;
+  jsonData?: unknown | undefined;
   /** Outer envelope header metadata. */
-  head?: Record<string, unknown>;
+  head?: Record<string, unknown> | undefined;
 }
 
 /** Payload for the `"raw"` event — an unparseable / non-envelope MQTT message. */
