@@ -1,9 +1,9 @@
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TOKEN_CACHE_FILE = join(__dirname, "..", "apitoken.cache.json");
+const TOKEN_CACHE_FILE = join(__dirname, '..', 'apitoken.cache.json');
 
 export interface AuthCredentials {
   email: string;
@@ -21,7 +21,7 @@ export function loadCredentials(): AuthCredentials {
   const password = process.env.ANKER_PASSWORD ?? null;
   const countryId = process.env.ANKER_COUNTRY_ID ?? 'DE';
   if (!email || !password) {
-    throw new Error("Set ANKER_EMAIL and ANKER_PASSWORD environment variables.");
+    throw new Error('Set ANKER_EMAIL and ANKER_PASSWORD environment variables.');
   }
   return { email, password, countryId };
 }
@@ -29,7 +29,7 @@ export function loadCredentials(): AuthCredentials {
 export function loadAuthTokensFromCache(): AuthTokens {
   try {
     if (existsSync(TOKEN_CACHE_FILE)) {
-      const raw = readFileSync(TOKEN_CACHE_FILE, "utf-8");
+      const raw = readFileSync(TOKEN_CACHE_FILE, 'utf-8');
       const data = JSON.parse(raw) as AuthTokens;
       return { token: data.token ?? null, gtoken: data.gtoken ?? null };
     }
@@ -41,9 +41,12 @@ export function loadAuthTokensFromCache(): AuthTokens {
 
 export function saveAuthTokensToCache(tokens: AuthTokens): void {
   try {
-    writeFileSync(TOKEN_CACHE_FILE, JSON.stringify(tokens, null, 2), "utf-8");
+    writeFileSync(TOKEN_CACHE_FILE, JSON.stringify(tokens, null, 2), 'utf-8');
   } catch (error) {
-    console.warn("Failed to write token cache:", error instanceof Error ? error.message : String(error));
+    console.warn(
+      'Failed to write token cache:',
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }
 

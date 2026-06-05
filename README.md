@@ -6,11 +6,11 @@ This is a **pnpm monorepo** containing the reusable library packages and CLI too
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@lab759/solix-api`](./packages/solix-api) | Cloud REST API client — login, status queries, site/device discovery, MQTT credential retrieval |
-| [`@lab759/solix-mqtt`](./packages/solix-mqtt) | MQTT client for real-time binary protocol data from Anker Solix devices |
-| [`@lab759/solix-status`](./packages/solix-status) | CLI tools — REST polling, MQTT streaming, and MQTT-to-MQTT bridge |
+| Package                                           | Description                                                                                     |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`@lab759/solix-api`](./packages/solix-api)       | Cloud REST API client — login, status queries, site/device discovery, MQTT credential retrieval |
+| [`@lab759/solix-mqtt`](./packages/solix-mqtt)     | MQTT client for real-time binary protocol data from Anker Solix devices                         |
+| [`@lab759/solix-status`](./packages/solix-status) | CLI tools — REST polling, MQTT streaming, and MQTT-to-MQTT bridge                               |
 
 ## Setup
 
@@ -39,13 +39,13 @@ The CLI scripts live in the [`@lab759/solix-status`](./packages/solix-status) pa
 pnpm api [options]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--site-id <ID>` | Target a specific site (optional — uses the first available if omitted) |
-| `--device-sn <SN>` | Target a specific device (optional — uses the first Solarbank if omitted) |
-| `--list` | List all sites and their Solarbank devices, then exit |
-| `--watch` | Poll continuously at a fixed interval |
-| `--interval <SECONDS>` | Polling interval in seconds (default `30`, used with `--watch`) |
+| Option                 | Description                                                               |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `--site-id <ID>`       | Target a specific site (optional — uses the first available if omitted)   |
+| `--device-sn <SN>`     | Target a specific device (optional — uses the first Solarbank if omitted) |
+| `--list`               | List all sites and their Solarbank devices, then exit                     |
+| `--watch`              | Poll continuously at a fixed interval                                     |
+| `--interval <SECONDS>` | Polling interval in seconds (default `30`, used with `--watch`)           |
 
 **Examples:**
 
@@ -76,10 +76,10 @@ pnpm bridge [--raw]
 
 Same as the MQTT stream, but also publishes parsed device status to a **second MQTT broker** (e.g. a local Home Assistant MQTT instance). Requires these additional environment variables:
 
-| Variable | Description |
-|----------|-------------|
+| Variable        | Description                                            |
+| --------------- | ------------------------------------------------------ |
 | `TARGET_BROKER` | Host of the target MQTT broker (e.g. `localhost:1883`) |
-| `TARGET_TOPIC` | MQTT topic to publish status updates to |
+| `TARGET_TOPIC`  | MQTT topic to publish status updates to                |
 
 ## Output example (REST API)
 

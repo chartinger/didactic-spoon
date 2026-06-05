@@ -1,44 +1,44 @@
-import { createCryptoMaterial, encryptPassword, md5Hex, type CryptoMaterial } from "./crypto.js";
+import { createCryptoMaterial, encryptPassword, md5Hex, type CryptoMaterial } from './crypto.js';
 
 const API_SERVERS = {
-  eu: "https://ankerpower-api-eu.anker.com",
-  com: "https://ankerpower-api.anker.com",
+  eu: 'https://ankerpower-api-eu.anker.com',
+  com: 'https://ankerpower-api.anker.com',
 } as const;
 
 const COM_COUNTRIES = new Set([
-  "DZ",
-  "LB",
-  "SY",
-  "EG",
-  "LY",
-  "TN",
-  "MA",
-  "JO",
-  "PS",
-  "AR",
-  "AU",
-  "BR",
-  "HK",
-  "IN",
-  "JP",
-  "MX",
-  "NG",
-  "NZ",
-  "RU",
-  "SG",
-  "ZA",
-  "KR",
-  "TW",
-  "US",
-  "CA",
-  "RO",
+  'DZ',
+  'LB',
+  'SY',
+  'EG',
+  'LY',
+  'TN',
+  'MA',
+  'JO',
+  'PS',
+  'AR',
+  'AU',
+  'BR',
+  'HK',
+  'IN',
+  'JP',
+  'MX',
+  'NG',
+  'NZ',
+  'RU',
+  'SG',
+  'ZA',
+  'KR',
+  'TW',
+  'US',
+  'CA',
+  'RO',
 ]);
 
 const ENDPOINTS = {
-  login: "passport/login",
-  siteList: "power_service/v1/site/get_site_list",
-  sceneInfo: "power_service/v1/site/get_scen_info",
-  mqttInfo: "app/devicemanage/get_user_mqtt_info",
+  login: 'passport/login',
+  siteList: 'power_service/v1/site/get_site_list',
+  sceneInfo: 'power_service/v1/site/get_scen_info',
+  mqttInfo: 'app/devicemanage/get_user_mqtt_info',
 } as const;
 
 type JsonObject = Record<string, unknown>;
@@ -100,9 +100,7 @@ export class AnkerSolixClient {
     this.email = options.email;
     this.password = options.password;
     this.countryId = options.countryId.toUpperCase();
-    this.apiBase = COM_COUNTRIES.has(this.countryId)
-      ? API_SERVERS.com
-      : API_SERVERS.eu;
+    this.apiBase = COM_COUNTRIES.has(this.countryId) ? API_SERVERS.com : API_SERVERS.eu;
     this.cryptoMaterialPromise = createCryptoMaterial();
     this.token = options.token ?? null;
     this.gtoken = options.gtoken ?? null;
@@ -112,13 +110,13 @@ export class AnkerSolixClient {
   public async getCurrentStatus(siteId?: string, deviceSn?: string): Promise<DeviceStatus> {
     const targetSiteId = siteId ?? (await this.getSiteList())[0]?.site_id;
     if (!targetSiteId) {
-      throw new Error("No site found for this account.");
+      throw new Error('No site found for this account.');
     }
 
     const scene = await this.getSceneInfo(targetSiteId);
     const status = extractStatusFromScene(targetSiteId, scene, deviceSn);
     if (!status) {
-      throw new Error("No matching Solarbank device found in scene data.");
+      throw new Error('No matching Solarbank device found in scene data.');
     }
     return status;
   }
@@ -145,8 +143,8 @@ export class AnkerSolixClient {
         ? (solarbankInfo.solarbank_list as JsonObject[])
         : [];
       for (const device of solarbankList) {
-        const deviceSn = String(device.device_sn ?? "");
-        const productCode = String(device.product_code ?? "");
+        const deviceSn = String(device.device_sn ?? '');
+        const productCode = String(device.product_code ?? '');
         if (deviceSn) {
           devices.push({ siteId, deviceSn, productCode });
         }
@@ -157,14 +155,14 @@ export class AnkerSolixClient {
 
   public async getMqttInfo(): Promise<MqttInfo> {
     const data = await this.request<JsonObject>(ENDPOINTS.mqttInfo, {});
-    const endpointAddr = String(data.endpoint_addr ?? data.broker_host ?? data.host ?? "").trim();
+    const endpointAddr = String(data.endpoint_addr ?? data.broker_host ?? data.host ?? '').trim();
     const endpointUrl =
-      endpointAddr.startsWith("mqtt://") || endpointAddr.startsWith("mqtts://")
+      endpointAddr.startsWith('mqtt://') || endpointAddr.startsWith('mqtts://')
         ? endpointAddr
         : endpointAddr
           ? `mqtts://${endpointAddr}`
-          : "";
-    let brokerHost = "";
+          : '';
+    let brokerHost = '';
     let brokerPort = Number(data.broker_port ?? data.port ?? 8883);
     if (endpointUrl) {
       try {
@@ -175,14 +173,14 @@ export class AnkerSolixClient {
         brokerHost = endpointAddr;
       }
     }
-    const clientId = String(data.thing_name ?? data.client_id ?? data.clientId ?? "");
-    const caCert = String(data.aws_root_ca1_pem ?? data.ca_cert ?? data.caCert ?? "");
-    const clientCert = String(data.certificate_pem ?? data.client_cert ?? data.clientCert ?? "");
+    const clientId = String(data.thing_name ?? data.client_id ?? data.clientId ?? '');
+    const caCert = String(data.aws_root_ca1_pem ?? data.ca_cert ?? data.caCert ?? '');
+    const clientCert = String(data.certificate_pem ?? data.client_cert ?? data.clientCert ?? '');
     const clientKey = String(
-      data.private_key ?? data.client_private_key ?? data.client_key ?? data.clientKey ?? "",
+      data.private_key ?? data.client_private_key ?? data.client_key ?? data.clientKey ?? '',
     );
     if (!brokerHost || !caCert || !clientCert || !clientKey) {
-      throw new Error("Incomplete MQTT credentials returned by API.");
+      throw new Error('Incomplete MQTT credentials returned by API.');
     }
     return { brokerHost, brokerPort, clientId, caCert, clientCert, clientKey };
   }
@@ -201,7 +199,7 @@ export class AnkerSolixClient {
     }
 
     const response = await fetch(`${this.apiBase}/${endpoint}`, {
-      method: "POST",
+      method: 'POST',
       headers: this.headers(),
       body: JSON.stringify(body),
     });
@@ -223,7 +221,7 @@ export class AnkerSolixClient {
     }
 
     if ((json.code as number | undefined) !== 0) {
-      const message = (json.msg as string | undefined) ?? "Unknown API error";
+      const message = (json.msg as string | undefined) ?? 'Unknown API error';
       throw new Error(`Anker API error (${String(json.code)}): ${message}`);
     }
 
@@ -243,7 +241,7 @@ export class AnkerSolixClient {
   }
 
   private clearSession(): void {
-    console.warn("Authentication failed, clearing session and retrying...");
+    console.warn('Authentication failed, clearing session and retrying...');
     this.token = null;
     this.gtoken = null;
   }
@@ -254,11 +252,11 @@ export class AnkerSolixClient {
     }
 
     const code = json.code;
-    if (typeof code === "number" && (code === 401 || code === 403)) {
+    if (typeof code === 'number' && (code === 401 || code === 403)) {
       return true;
     }
 
-    const message = String(json.msg ?? "").toLowerCase();
+    const message = String(json.msg ?? '').toLowerCase();
     if (!message) {
       return false;
     }
@@ -267,7 +265,7 @@ export class AnkerSolixClient {
 
   private async authenticate(): Promise<void> {
     if (this.token && this.gtoken) {
-      console.log("Already authenticated, skipping login.");
+      console.log('Already authenticated, skipping login.');
       return;
     }
     const cryptoMaterial = await this.cryptoMaterialPromise;
@@ -283,7 +281,7 @@ export class AnkerSolixClient {
     };
 
     const response = await fetch(`${this.apiBase}/${ENDPOINTS.login}`, {
-      method: "POST",
+      method: 'POST',
       headers: this.headers(),
       body: JSON.stringify(loginBody),
     });
@@ -293,12 +291,12 @@ export class AnkerSolixClient {
     }
 
     const data = (json.data ?? {}) as JsonObject;
-    const userId = String(data.user_id ?? "");
-    this.token = String(data.auth_token ?? "");
+    const userId = String(data.user_id ?? '');
+    this.token = String(data.auth_token ?? '');
     this.gtoken = userId ? md5Hex(userId) : null;
 
     if (!this.token || !this.gtoken) {
-      throw new Error("Login succeeded but token data is missing.");
+      throw new Error('Login succeeded but token data is missing.');
     }
 
     this.onAuthTokens?.({ token: this.token, gtoken: this.gtoken });
@@ -307,15 +305,15 @@ export class AnkerSolixClient {
 
   private headers(): Record<string, string> {
     const headers: Record<string, string> = {
-      "content-type": "application/json",
-      "model-type": "DESKTOP",
-      "app-name": "anker_power",
-      "os-type": "android",
+      'content-type': 'application/json',
+      'model-type': 'DESKTOP',
+      'app-name': 'anker_power',
+      'os-type': 'android',
       country: this.countryId,
       timezone: timezoneGmtString(),
     };
     if (this.token && this.gtoken) {
-      headers["x-auth-token"] = this.token;
+      headers['x-auth-token'] = this.token;
       headers.gtoken = this.gtoken;
     }
     return headers;
@@ -327,11 +325,9 @@ export class AnkerSolixClient {
       const parsed = JSON.parse(raw) as unknown;
       return asObject(parsed);
     } catch {
-      const preview = raw.replace(/\s+/g, " ").trim().slice(0, 200);
-      const body = preview.length > 0 ? preview : "<empty body>";
-      throw new Error(
-        `Invalid JSON response from ${endpoint} (HTTP ${response.status}): ${body}`,
-      );
+      const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 200);
+      const body = preview.length > 0 ? preview : '<empty body>';
+      throw new Error(`Invalid JSON response from ${endpoint} (HTTP ${response.status}): ${body}`);
     }
   }
 }
@@ -348,17 +344,21 @@ export function extractStatusFromScene(
 
   const device =
     (deviceSn
-      ? solarbankList.find((entry) => String(entry.device_sn ?? "") === deviceSn)
+      ? solarbankList.find((entry) => String(entry.device_sn ?? '') === deviceSn)
       : solarbankList[0]) ?? null;
 
   if (!device) {
     return null;
   }
 
-  const powerUnit = firstString(device.power_unit, solarbankInfo.power_unit) ?? "W";
+  const powerUnit = firstString(device.power_unit, solarbankInfo.power_unit) ?? 'W';
   const batteryPercent = toNumber(device.battery_power);
   const panelInput = toWatts(
-    firstNumber(device.photovoltaic_power, device.input_power, solarbankInfo.total_photovoltaic_power),
+    firstNumber(
+      device.photovoltaic_power,
+      device.input_power,
+      solarbankInfo.total_photovoltaic_power,
+    ),
     powerUnit,
   );
   const pvInput1 = toWatts(toNumber(solarbankInfo.solar_power_1), powerUnit);
@@ -372,7 +372,7 @@ export function extractStatusFromScene(
 
   return {
     siteId,
-    deviceSn: String(device.device_sn ?? ""),
+    deviceSn: String(device.device_sn ?? ''),
     batteryPercent,
     panelInputWatts: panelInput,
     pvInput1Watts: pvInput1,
@@ -395,7 +395,7 @@ function firstNumber(...values: unknown[]): number | null {
 
 function firstString(...values: unknown[]): string | null {
   for (const value of values) {
-    if (typeof value === "string" && value.length > 0) {
+    if (typeof value === 'string' && value.length > 0) {
       return value;
     }
   }
@@ -403,10 +403,10 @@ function firstString(...values: unknown[]): string | null {
 }
 
 function toNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === "string" && value.trim().length > 0) {
+  if (typeof value === 'string' && value.trim().length > 0) {
     const parsed = Number.parseFloat(value);
     if (Number.isFinite(parsed)) {
       return parsed;
@@ -419,11 +419,11 @@ function toWatts(value: number | null, unit: string): number | null {
   if (value === null) {
     return null;
   }
-  return unit.toLowerCase().includes("kw") ? Math.round(value * 1000) : Math.round(value);
+  return unit.toLowerCase().includes('kw') ? Math.round(value * 1000) : Math.round(value);
 }
 
 function asObject(value: unknown): JsonObject {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value as JsonObject;
   }
   return {};
@@ -431,9 +431,9 @@ function asObject(value: unknown): JsonObject {
 
 function timezoneGmtString(): string {
   const offsetMinutes = -new Date().getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const sign = offsetMinutes >= 0 ? '+' : '-';
   const absolute = Math.abs(offsetMinutes);
-  const hours = String(Math.floor(absolute / 60)).padStart(2, "0");
-  const minutes = String(absolute % 60).padStart(2, "0");
+  const hours = String(Math.floor(absolute / 60)).padStart(2, '0');
+  const minutes = String(absolute % 60).padStart(2, '0');
   return `GMT${sign}${hours}:${minutes}`;
 }

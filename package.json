@@ -1,32 +1,37 @@
 {
   "name": "@lab759/solix-monorepo",
   "version": "1.0.0",
-  "description": "",
-  "main": "./dist/cli.cjs",
   "private": true,
+  "description": "",
+  "keywords": [],
+  "homepage": "https://github.com/chartinger/solix-status#readme",
+  "bugs": {
+    "url": "https://github.com/chartinger/solix-status/issues"
+  },
+  "license": "MIT",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chartinger/solix-status.git"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/cli.cjs",
   "scripts": {
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "api": "pnpm --filter @lab759/solix-status api",
     "mqtt": "pnpm --filter @lab759/solix-status mqtt",
-    "bridge": "pnpm --filter @lab759/solix-status bridge"
+    "bridge": "pnpm --filter @lab759/solix-status bridge",
+    "format": "oxfmt",
+    "lint": "oxlint"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/chartinger/solix-status.git"
+  "devDependencies": {
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
-  "type": "module",
-  "bugs": {
-    "url": "https://github.com/chartinger/solix-status/issues"
-  },
-  "homepage": "https://github.com/chartinger/solix-status#readme",
-  "devDependencies": {},
-  "dependencies": {},
   "engines": {
     "node": ">=20"
-  },
-  "sideEffects": false
+  }
 }

@@ -1,1 +1,1 @@
-export * from "./AnkerSolixMqttClient.js";
+export * from './AnkerSolixMqttClient.js';

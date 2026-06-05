@@ -1,11 +1,11 @@
-import { AnkerSolixClient, type AnkerClientOptions, type DeviceStatus } from "@lab759/solix-api";
-import { AnkerSolixMqttClient } from "@lab759/solix-mqtt";
-import "dotenv/config";
-import { connect } from "mqtt";
-import { loadAuthInfo, saveAuthTokensToCache } from "./auth.js";
+import { AnkerSolixClient, type AnkerClientOptions, type DeviceStatus } from '@lab759/solix-api';
+import { AnkerSolixMqttClient } from '@lab759/solix-mqtt';
+import 'dotenv/config';
+import { connect } from 'mqtt';
+import { loadAuthInfo, saveAuthTokensToCache } from './auth.js';
 
 async function main(): Promise<void> {
-  const showRaw = process.argv.includes("--raw");
+  const showRaw = process.argv.includes('--raw');
 
   const apiClientOptions: AnkerClientOptions = {
     ...loadAuthInfo(),
@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   const TARGET_TOPIC = process.env.TARGET_TOPIC;
 
   if (!TARGET_BROKER_HOST || !TARGET_TOPIC) {
-    throw new Error("Set TARGET_BROKER and TARGET_TOPIC environment variables.");
+    throw new Error('Set TARGET_BROKER and TARGET_TOPIC environment variables.');
   }
 
   const targetMqttClient = connect(`mqtt://${TARGET_BROKER_HOST}`);
@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   const initialStatus = await client.getCurrentStatus();
   targetMqttClient.publish(TARGET_TOPIC, JSON.stringify(initialStatus));
 
-  solixMqttClient.on("message", (data) => {
+  solixMqttClient.on('message', (data) => {
     if (data.pn === 'A17C5' && data.msgType === '0408') {
       const deviceStatus: DeviceStatus = {
         siteId: '?',
@@ -49,12 +49,12 @@ async function main(): Promise<void> {
 
   const exit = (code: number): void => {
     solixMqttClient.disconnect();
-    targetMqttClient.end(true)
+    targetMqttClient.end(true);
     process.exit(code);
   };
 
-  process.on("SIGINT", () => exit(0));
-  process.on("SIGTERM", () => exit(0));
+  process.on('SIGINT', () => exit(0));
+  process.on('SIGTERM', () => exit(0));
 }
 
 main().catch((error: unknown) => {

@@ -1,1 +1,1 @@
-export * from "./AnkerSolixClient.js";
+export * from './AnkerSolixClient.js';

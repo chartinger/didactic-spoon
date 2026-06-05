@@ -87,9 +87,7 @@ export interface FieldDescriptor {
    * - Record keyed by decimal offset string → FieldDescriptor or BitmapEntry[].
    * - FieldDescriptor[] for list-mode (relative sequential) strb.
    */
-  bytes?:
-    | Record<string, FieldDescriptor | BitmapEntry[]>
-    | FieldDescriptor[];
+  bytes?: Record<string, FieldDescriptor | BitmapEntry[]> | FieldDescriptor[];
   /** Human-readable topic label (e.g. "param_info"). Not used in decoding. */
   topic?: string;
 }
@@ -129,7 +127,7 @@ export interface PacketHeader {
   /** Total message length in bytes including prefix and checksum. */
   totalLength: number;
   /** Message direction derived from the pattern byte (byte 5). */
-  direction: "send" | "receive" | "unknown";
+  direction: 'send' | 'receive' | 'unknown';
   /** 2-byte message type as lowercase hex (e.g. "0405"). */
   msgType: string;
   /** Optional increment byte (present when byte[9] is < 0xA0). */
@@ -171,19 +169,19 @@ export function parseEnvelope(raw: Buffer | string): {
   binaryData: Buffer | null;
   jsonData: unknown;
 } {
-  const text = typeof raw === "string" ? raw : raw.toString("utf8");
+  const text = typeof raw === 'string' ? raw : raw.toString('utf8');
   const outer = JSON.parse(text) as MqttEnvelope;
   const inner = JSON.parse(outer.payload) as MqttInnerPayload;
 
-  const pn = inner.pn ?? "";
-  const sn = inner.sn ?? "";
+  const pn = inner.pn ?? '';
+  const sn = inner.sn ?? '';
   const head = outer.head;
 
   if (inner.data) {
-    return { head, pn, sn, binaryData: Buffer.from(inner.data, "base64"), jsonData: null };
+    return { head, pn, sn, binaryData: Buffer.from(inner.data, 'base64'), jsonData: null };
   }
   if (inner.trans) {
-    const decoded = Buffer.from(inner.trans, "base64").toString("utf8");
+    const decoded = Buffer.from(inner.trans, 'base64').toString('utf8');
     return { head, pn, sn, binaryData: null, jsonData: JSON.parse(decoded) as unknown };
   }
   return { head, pn, sn, binaryData: null, jsonData: null };
@@ -210,10 +208,9 @@ export function parseHeader(buf: Buffer): { header: PacketHeader; fieldsStart: n
   const totalLength = buf.readUInt16LE(2);
   const directionByte = buf.readUInt8(5);
   const direction =
-    directionByte === 0x00 ? "send" : directionByte === 0x01 ? "receive" : "unknown";
+    directionByte === 0x00 ? 'send' : directionByte === 0x01 ? 'receive' : 'unknown';
   const msgType =
-    buf.readUInt8(7).toString(16).padStart(2, "0") +
-    buf.readUInt8(8).toString(16).padStart(2, "0");
+    buf.readUInt8(7).toString(16).padStart(2, '0') + buf.readUInt8(8).toString(16).padStart(2, '0');
 
   // Byte 9 is an optional increment byte. It is ABSENT (fields start at 9) when
   // byte[9] is in the range A0–A9 (those are field identifier bytes). Otherwise
@@ -266,7 +263,7 @@ export function parseRawFields(buf: Buffer, start: number): Map<number, RawField
       if (twoByteLen > 3 && twoByteLen <= remaining - 4) {
         try {
           const strData = buf.subarray(idx + 3, idx + 2 + twoByteLen);
-          new TextDecoder("utf-8", { fatal: true }).decode(strData);
+          new TextDecoder('utf-8', { fatal: true }).decode(strData);
           lenBytes = 2;
           fLength = twoByteLen;
         } catch {
@@ -283,8 +280,7 @@ export function parseRawFields(buf: Buffer, start: number): Map<number, RawField
         const afterField = remaining - twoByteLen;
         if (
           nextFieldOffset < buf.length &&
-          (afterField === 4 ||
-            (buf.readUInt8(nextFieldOffset) > fieldId && afterField >= 3))
+          (afterField === 4 || (buf.readUInt8(nextFieldOffset) > fieldId && afterField >= 3))
         ) {
           lenBytes = 2;
           fLength = twoByteLen;
@@ -352,7 +348,7 @@ export function decodeFields(
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [idByte, rawField] of rawFields) {
-    const key = idByte.toString(16).padStart(2, "0");
+    const key = idByte.toString(16).padStart(2, '0');
     const descriptor = fieldMap[key];
     if (!descriptor) continue;
     Object.assign(result, decodeFieldValue(rawField.data, rawField.type, descriptor));
@@ -404,10 +400,10 @@ export function decodeFieldValue(
       const name = descriptor.name;
       if (!name) return {};
       try {
-        const obj = JSON.parse(data.toString("utf8")) as unknown;
+        const obj = JSON.parse(data.toString('utf8')) as unknown;
         return { [name]: obj };
       } catch {
-        return { [name]: data.toString("utf8") };
+        return { [name]: data.toString('utf8') };
       }
     }
 
@@ -422,7 +418,7 @@ export function decodeFieldValue(
         if (!name) return {};
         const raw = data.readUInt8(0);
         const signed = descriptor.signed === true;
-        const v = signed ? ((raw << 24) >> 24) : raw;
+        const v = signed ? (raw << 24) >> 24 : raw;
         return { [name]: roundByFactor(v * (descriptor.factor ?? 1), descriptor.factor ?? 1) };
       }
       return {};
@@ -437,8 +433,11 @@ export function decodeFieldValue(
 function decodeStr(data: Buffer, desc: FieldDescriptor): Record<string, unknown> {
   const name = desc.name;
   if (!name) return {};
-  const raw = data.toString("utf8").replace(/[^\x20-\x7e]/g, "").trim();
-  if (name.includes("timestamp")) {
+  const raw = data
+    .toString('utf8')
+    .replace(/[^\x20-\x7e]/g, '')
+    .trim();
+  if (name.includes('timestamp')) {
     const ms = Number(raw);
     return { [name]: Number.isFinite(ms) ? ms / 1000 : raw };
   }
@@ -450,7 +449,7 @@ function decodeUi(data: Buffer, desc: FieldDescriptor): Record<string, unknown> 
   if (!name) return {};
   const raw = data.readUInt8(0);
   const signed = desc.signed === true;
-  const v = signed ? ((raw << 24) >> 24) : raw;
+  const v = signed ? (raw << 24) >> 24 : raw;
   return { [name]: roundByFactor(v * (desc.factor ?? 1), desc.factor ?? 1) };
 }
 
@@ -463,15 +462,13 @@ function decodeSile(data: Buffer, desc: FieldDescriptor): Record<string, unknown
   if (!name) return {};
   if (data.length < 2) return {};
   const signed = desc.signed !== false; // default: signed
-  const v = signed
-    ? data.readInt16LE(0)
-    : data.readUInt16LE(0);
+  const v = signed ? data.readInt16LE(0) : data.readUInt16LE(0);
 
-  if (name.endsWith("_time")) {
+  if (name.endsWith('_time')) {
     return { [name]: convertTime(data) };
   }
-  if (name.includes("version") || name.startsWith("sw_")) {
-    return { [name]: String(v).split("").join(".") };
+  if (name.includes('version') || name.startsWith('sw_')) {
+    return { [name]: String(v).split('').join('.') };
   }
   return { [name]: roundByFactor(v * (desc.factor ?? 1), desc.factor ?? 1) };
 }
@@ -488,14 +485,14 @@ function decodeVar(data: Buffer, desc: FieldDescriptor): Record<string, unknown>
 
   if (count === 1) {
     const raw = data.readUInt8(0);
-    value = roundByFactor((desc.signed === true ? ((raw << 24) >> 24) : raw) * factor, factor);
+    value = roundByFactor((desc.signed === true ? (raw << 24) >> 24 : raw) * factor, factor);
   } else if (count === 2) {
     const raw = desc.signed !== false ? data.readInt16LE(0) : data.readUInt16LE(0);
     value = roundByFactor(raw * factor, factor);
   } else if (count === 4) {
     value = Array.from({ length: Math.min(data.length, 4) }, (_, i) => {
       const b = data.readUInt8(i);
-      const sv = desc.signed === true ? ((b << 24) >> 24) : b;
+      const sv = desc.signed === true ? (b << 24) >> 24 : b;
       return roundByFactor(sv * factor, factor);
     });
   } else {
@@ -504,13 +501,13 @@ function decodeVar(data: Buffer, desc: FieldDescriptor): Record<string, unknown>
     value = roundByFactor(raw * factor, factor);
   }
 
-  if (typeof value === "number" || Array.isArray(value)) {
-    if (name.endsWith("_time")) {
+  if (typeof value === 'number' || Array.isArray(value)) {
+    if (name.endsWith('_time')) {
       return { [name]: convertTime(data) };
     }
-    if (name.includes("version") || name.startsWith("sw_")) {
+    if (name.includes('version') || name.startsWith('sw_')) {
       return {
-        [name]: Array.isArray(value) ? value.join(".") : String(value),
+        [name]: Array.isArray(value) ? value.join('.') : String(value),
       };
     }
   }
@@ -587,7 +584,10 @@ function decodeStrbDict(
         if (bitmap.mask && bitmap.name) {
           let mask = bitmap.mask;
           let val = data.readUInt8(pos);
-          while ((mask & 1) === 0) { mask >>= 1; val >>= 1; }
+          while ((mask & 1) === 0) {
+            mask >>= 1;
+            val >>= 1;
+          }
           result[bitmap.name] = val & mask;
         }
       }
@@ -736,10 +736,10 @@ export function convertTime(buf: Buffer): string {
     const h = Math.floor(total / 3600);
     const m = Math.floor((total % 3600) / 60);
     const s = total % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
   const total = buf.readUInt8(0) | ((buf.readUInt8(1) ?? 0) << 8);
   const h = Math.floor(total / 60);
   const m = total % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }

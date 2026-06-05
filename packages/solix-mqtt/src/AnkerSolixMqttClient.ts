@@ -1,9 +1,9 @@
-import type { AnkerSolixClient } from "@lab759/solix-api";
+import type { AnkerSolixClient } from '@lab759/solix-api';
 import EventEmitter from 'node:events';
-import { connect } from "mqtt";
-import type { FieldMap } from "./mqtt-packet.js";
-import { parseEnvelope, parseHeader, parseMessage } from "./mqtt-packet.js";
-import { getFieldMap } from "./mqttmap.js";
+import { connect } from 'mqtt';
+import type { FieldMap } from './mqtt-packet.js';
+import { parseEnvelope, parseHeader, parseMessage } from './mqtt-packet.js';
+import { getFieldMap } from './mqttmap.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Typed event payloads emitted by AnkerSolixMqttClient
@@ -26,7 +26,7 @@ export interface MqttMessageEvent {
   /** Raw binary fields (only included when `raw: true` option is set). */
   rawFields?: Record<string, { id: string; type: string; hex: string }> | undefined;
   /** Parsed JSON payload for X1/HES devices (non-binary protocol). */
-  jsonData?: unknown | undefined;
+  jsonData?: unknown;
   /** Outer envelope header metadata. */
   head?: Record<string, unknown> | undefined;
 }
@@ -51,22 +51,25 @@ export type AnkerSolixMqttClientOptions = {
 export class AnkerSolixMqttClient extends EventEmitter<Events> {
   private mqttClient: ReturnType<typeof connect> | null = null;
 
-  constructor(private apiClient: AnkerSolixClient, private options: AnkerSolixMqttClientOptions = { raw: false }) {
+  constructor(
+    private apiClient: AnkerSolixClient,
+    private options: AnkerSolixMqttClientOptions = { raw: false },
+  ) {
     super();
   }
 
   public async connect(): Promise<void> {
     if (this.mqttClient) {
-      throw new Error("Already connected.");
+      throw new Error('Already connected.');
     }
-    process.stderr.write("Fetching MQTT credentials…\n");
+    process.stderr.write('Fetching MQTT credentials…\n');
     const [mqttInfo, devices] = await Promise.all([
       this.apiClient.getMqttInfo(),
       this.apiClient.getSiteDevices(),
     ]);
 
     if (devices.length === 0) {
-      throw new Error("No devices found for this account.");
+      throw new Error('No devices found for this account.');
     }
 
     const brokerUrl = `mqtts://${mqttInfo.brokerHost}:${mqttInfo.brokerPort}`;
@@ -77,7 +80,7 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
       cert: mqttInfo.clientCert,
       key: mqttInfo.clientKey,
       rejectUnauthorized: true,
-      protocol: "mqtts",
+      protocol: 'mqtts',
     };
     if (mqttInfo.clientId) {
       options.clientId = mqttInfo.clientId;
@@ -86,11 +89,11 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
     const mqttClient = connect(brokerUrl, options);
     this.mqttClient = mqttClient;
 
-    mqttClient.on("connect", () => {
-      process.stderr.write("Connected.\n");
+    mqttClient.on('connect', () => {
+      process.stderr.write('Connected.\n');
 
       for (const device of devices) {
-        const productCode = device.productCode || "+";
+        const productCode = device.productCode || '+';
         const topic = `dt/anker_power/${productCode}/${device.deviceSn}/#`;
         mqttClient.subscribe(topic, (err) => {
           if (err) {
@@ -102,7 +105,7 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
       }
     });
 
-    mqttClient.on("message", (topic: string, payload: Buffer) => {
+    mqttClient.on('message', (topic: string, payload: Buffer) => {
       // Try to parse the Anker Solix binary envelope.
       try {
         // Step 1: parse the outer envelope to extract pn and binary data
@@ -117,7 +120,7 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
             fieldMap = getFieldMap(pn, header.msgType);
           } catch {
             // If header parsing fails, fall back to the default 0405 map
-            fieldMap = getFieldMap(pn, "0405");
+            fieldMap = getFieldMap(pn, '0405');
           }
         }
         const result = parseMessage(payload, fieldMap);
@@ -128,11 +131,11 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
         if (this.options.raw && result.packet?.rawFields && result.packet.rawFields.size > 0) {
           rawFields = {};
           for (const [id, rf] of result.packet.rawFields) {
-            const key = id.toString(16).padStart(2, "0");
+            const key = id.toString(16).padStart(2, '0');
             rawFields[key] = {
               id: key,
-              type: rf.type !== undefined ? `0x${rf.type.toString(16).padStart(2, "0")}` : "??",
-              hex: rf.data.toString("hex"),
+              type: rf.type !== undefined ? `0x${rf.type.toString(16).padStart(2, '0')}` : '??',
+              hex: rf.data.toString('hex'),
             };
           }
         }
@@ -149,33 +152,32 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
           head: result.head,
         };
 
-        this.emit("message", msgEvent);
+        this.emit('message', msgEvent);
       } catch {
         // Fall back to raw output for non-envelope messages.
         let parsed: string;
         try {
-          parsed = JSON.parse(payload.toString("utf8"));
+          parsed = JSON.parse(payload.toString('utf8'));
         } catch {
-          parsed = payload.toString("base64");
+          parsed = payload.toString('base64');
         }
         const rawEvent: MqttRawEvent = { topic, payload: parsed };
-        this.emit("raw", rawEvent);
+        this.emit('raw', rawEvent);
       }
     });
 
-    mqttClient.on("error", (err: Error) => {
+    mqttClient.on('error', (err: Error) => {
       process.stderr.write(`MQTT error: ${err.message}\n`);
     });
 
-    mqttClient.on("close", () => {
-      process.stderr.write("Connection closed.\n");
+    mqttClient.on('close', () => {
+      process.stderr.write('Connection closed.\n');
     });
 
-    mqttClient.on("reconnect", () => {
-      console.error("Skipping MQTT reconnect - closing client.");
+    mqttClient.on('reconnect', () => {
+      console.error('Skipping MQTT reconnect - closing client.');
       mqttClient.end();
     });
-
   }
 
   public disconnect(): void {

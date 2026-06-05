@@ -1,5 +1,5 @@
 const API_PUBLIC_KEY_HEX =
-  "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076";
+  '04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076';
 
 export type CryptoMaterial = {
   publicKeyHex: string;
@@ -10,24 +10,22 @@ export async function createCryptoMaterial(
   serverPublicKeyHex: string = API_PUBLIC_KEY_HEX,
 ): Promise<CryptoMaterial> {
   const cryptoApi = getCryptoApi();
-  const keyPair = await cryptoApi.subtle.generateKey(
-    { name: "ECDH", namedCurve: "P-256" },
-    true,
-    ["deriveBits"],
-  );
+  const keyPair = await cryptoApi.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, [
+    'deriveBits',
+  ]);
   const serverPublicKey = await cryptoApi.subtle.importKey(
-    "raw",
+    'raw',
     hexToBytes(serverPublicKeyHex),
-    { name: "ECDH", namedCurve: "P-256" },
+    { name: 'ECDH', namedCurve: 'P-256' },
     false,
     [],
   );
   const sharedKeyBuffer = await cryptoApi.subtle.deriveBits(
-    { name: "ECDH", public: serverPublicKey },
+    { name: 'ECDH', public: serverPublicKey },
     keyPair.privateKey,
     256,
   );
-  const publicKeyBuffer = await cryptoApi.subtle.exportKey("raw", keyPair.publicKey);
+  const publicKeyBuffer = await cryptoApi.subtle.exportKey('raw', keyPair.publicKey);
   return {
     publicKeyHex: bytesToHex(new Uint8Array(publicKeyBuffer)),
     sharedKey: new Uint8Array(sharedKeyBuffer),
@@ -37,15 +35,11 @@ export async function createCryptoMaterial(
 export async function encryptPassword(password: string, sharedKey: Uint8Array): Promise<string> {
   const iv = sharedKey.subarray(0, 16);
   const cryptoApi = getCryptoApi();
-  const key = await cryptoApi.subtle.importKey(
-    "raw",
-    sharedKey,
-    { name: "AES-CBC" },
-    false,
-    ["encrypt"],
-  );
+  const key = await cryptoApi.subtle.importKey('raw', sharedKey, { name: 'AES-CBC' }, false, [
+    'encrypt',
+  ]);
   const plaintext = new TextEncoder().encode(password);
-  const encrypted = await cryptoApi.subtle.encrypt({ name: "AES-CBC", iv }, key, plaintext);
+  const encrypted = await cryptoApi.subtle.encrypt({ name: 'AES-CBC', iv }, key, plaintext);
   return bytesToBase64(new Uint8Array(encrypted));
 }
 
@@ -74,14 +68,14 @@ type CryptoSubtleLike = {
 function getCryptoApi(): { subtle: CryptoSubtleLike } {
   const cryptoApi = (globalThis as { crypto?: { subtle?: CryptoSubtleLike } }).crypto;
   if (!cryptoApi?.subtle) {
-    throw new Error("Web Crypto API is not available in this runtime.");
+    throw new Error('Web Crypto API is not available in this runtime.');
   }
   return cryptoApi as { subtle: CryptoSubtleLike };
 }
 
 function hexToBytes(hex: string): Uint8Array {
   if (hex.length % 2 !== 0) {
-    throw new Error("Invalid hex string length.");
+    throw new Error('Invalid hex string length.');
   }
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < bytes.length; i += 1) {
@@ -91,24 +85,24 @@ function hexToBytes(hex: string): Uint8Array {
 }
 
 function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
-  if (typeof btoa === "function") {
-    let binary = "";
+  if (typeof btoa === 'function') {
+    let binary = '';
     for (const byte of bytes) {
       binary += String.fromCharCode(byte);
     }
     return btoa(binary);
   }
-  return Buffer.from(bytes).toString("base64");
+  return Buffer.from(bytes).toString('base64');
 }
 
 const MD5_S = [
-  7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9,
-  14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16,
-  23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+  7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14,
+  20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6,
+  10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
 ];
 
 const MD5_K = Array.from(

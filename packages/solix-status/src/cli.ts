@@ -1,7 +1,12 @@
-import "dotenv/config";
-import { pathToFileURL } from "node:url";
-import { AnkerSolixClient, type AnkerClientOptions, type SiteDevice, type SiteInfo } from "@lab759/solix-api";
-import { loadAuthInfo, saveAuthTokensToCache } from "./auth.js";
+import 'dotenv/config';
+import { pathToFileURL } from 'node:url';
+import {
+  AnkerSolixClient,
+  type AnkerClientOptions,
+  type SiteDevice,
+  type SiteInfo,
+} from '@lab759/solix-api';
+import { loadAuthInfo, saveAuthTokensToCache } from './auth.js';
 
 export interface CliOptions {
   siteId?: string;
@@ -28,17 +33,17 @@ export function parseArgs(argv: string[]): CliOptions {
   for (let i = 0; i < argv.length; i += 1) {
     const current = argv[i];
     const next = argv[i + 1];
-    if (current === "--list") {
+    if (current === '--list') {
       result.list = true;
-    } else if (current === "--watch") {
+    } else if (current === '--watch') {
       result.watch = true;
-    } else if (current === "--site-id" && next) {
+    } else if (current === '--site-id' && next) {
       result.siteId = next;
       i += 1;
-    } else if (current === "--device-sn" && next) {
+    } else if (current === '--device-sn' && next) {
       result.deviceSn = next;
       i += 1;
-    } else if (current === "--interval" && next) {
+    } else if (current === '--interval' && next) {
       const parsed = Number.parseInt(next, 10);
       if (Number.isFinite(parsed) && parsed > 0) {
         result.interval = parsed;
@@ -118,8 +123,7 @@ async function main(): Promise<void> {
   await printStatus();
 
   if (watch) {
-    const sleep = (ms: number): Promise<void> =>
-      new Promise((resolve) => setTimeout(resolve, ms));
+    const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
     while (true) {
       await sleep(interval * 1000);
       await printStatus();
@@ -128,7 +132,7 @@ async function main(): Promise<void> {
 }
 
 const isDirectRun =
-  typeof process.argv[1] === "string" && import.meta.url === pathToFileURL(process.argv[1]).href;
+  typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isDirectRun) {
   main().catch((error: unknown) => {

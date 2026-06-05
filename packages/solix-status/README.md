@@ -18,10 +18,10 @@ Auth tokens are cached to `apitoken.cache.json` after the first successful login
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm api` | Poll the REST API for device status |
-| `pnpm mqtt` | Stream real-time data via MQTT |
+| Command       | Description                                        |
+| ------------- | -------------------------------------------------- |
+| `pnpm api`    | Poll the REST API for device status                |
+| `pnpm mqtt`   | Stream real-time data via MQTT                     |
 | `pnpm bridge` | Stream MQTT data and relay to a second MQTT broker |
 
 ---
@@ -32,13 +32,13 @@ Auth tokens are cached to `apitoken.cache.json` after the first successful login
 pnpm api [options]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--site-id <ID>` | Target a specific site (optional — uses the first available if omitted) |
-| `--device-sn <SN>` | Target a specific device (optional — uses the first Solarbank if omitted) |
-| `--list` | List all sites and their Solarbank devices, then exit |
-| `--watch` | Poll continuously at a fixed interval |
-| `--interval <SECONDS>` | Polling interval in seconds (default `30`, used with `--watch`) |
+| Option                 | Description                                                               |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `--site-id <ID>`       | Target a specific site (optional — uses the first available if omitted)   |
+| `--device-sn <SN>`     | Target a specific device (optional — uses the first Solarbank if omitted) |
+| `--list`               | List all sites and their Solarbank devices, then exit                     |
+| `--watch`              | Poll continuously at a fixed interval                                     |
+| `--interval <SECONDS>` | Polling interval in seconds (default `30`, used with `--watch`)           |
 
 **Examples:**
 
@@ -75,9 +75,9 @@ pnpm mqtt [--raw]
 
 Connects to the Anker Solix MQTT broker (AWS IoT), subscribes to all discovered Solarbank devices, and prints parsed binary messages as they arrive.
 
-| Argument | Description |
-|----------|-------------|
-| `--raw` | Include raw hex field dumps in the output (useful for reverse engineering) |
+| Argument | Description                                                                |
+| -------- | -------------------------------------------------------------------------- |
+| `--raw`  | Include raw hex field dumps in the output (useful for reverse engineering) |
 
 Press `Ctrl+C` to disconnect.
 
@@ -93,10 +93,10 @@ Same as the MQTT stream, but also publishes device status updates to a **second 
 
 Requires these additional environment variables:
 
-| Variable | Description |
-|----------|-------------|
+| Variable        | Description                                            |
+| --------------- | ------------------------------------------------------ |
 | `TARGET_BROKER` | Host of the target MQTT broker (e.g. `localhost:1883`) |
-| `TARGET_TOPIC` | MQTT topic to publish status JSON to |
+| `TARGET_TOPIC`  | MQTT topic to publish status JSON to                   |
 
 On startup it publishes an initial snapshot from the REST API, then streams real-time updates as they arrive over MQTT.
 

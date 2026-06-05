@@ -1,10 +1,10 @@
-import { AnkerSolixClient, type AnkerClientOptions, type DeviceStatus } from "@lab759/solix-api";
-import { AnkerSolixMqttClient } from "@lab759/solix-mqtt";
-import "dotenv/config";
-import { loadAuthInfo, saveAuthTokensToCache } from "./auth.js";
+import { AnkerSolixClient, type AnkerClientOptions, type DeviceStatus } from '@lab759/solix-api';
+import { AnkerSolixMqttClient } from '@lab759/solix-mqtt';
+import 'dotenv/config';
+import { loadAuthInfo, saveAuthTokensToCache } from './auth.js';
 
 async function main(): Promise<void> {
-  const showRaw = process.argv.includes("--raw");
+  const showRaw = process.argv.includes('--raw');
 
   const apiClientOptions: AnkerClientOptions = {
     ...loadAuthInfo(),
@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   const client = new AnkerSolixClient(apiClientOptions);
   const mqttClient = new AnkerSolixMqttClient(client, { raw: showRaw });
 
-  mqttClient.on("message", (data) => {
+  mqttClient.on('message', (data) => {
     const timestamp = new Date().toISOString();
     process.stdout.write(`[${timestamp}] ${data.topic}:\n`);
     process.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
     }
   });
 
-  mqttClient.on("raw", (data) => {
+  mqttClient.on('raw', (data) => {
     const timestamp = new Date().toISOString();
     process.stdout.write(`[${timestamp}] ${data.topic} (raw):\n`);
     process.stdout.write(`${data.payload}\n`);
@@ -48,8 +48,8 @@ async function main(): Promise<void> {
     process.exit(code);
   };
 
-  process.on("SIGINT", () => exit(0));
-  process.on("SIGTERM", () => exit(0));
+  process.on('SIGINT', () => exit(0));
+  process.on('SIGTERM', () => exit(0));
 }
 
 main().catch((error: unknown) => {

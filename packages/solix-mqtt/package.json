@@ -1,34 +1,19 @@
 {
   "name": "@lab759/solix-mqtt",
   "version": "0.0.1",
-  "description": "Unofficial Anker Solix MQTT real-time data client for TypeScript",
   "private": true,
-  "types": "./dist/index.d.cts",
-  "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "build": "tsdown",
-    "build:watch": "tsdown --watch"
-  },
-  "sideEffects": false,
+  "description": "Unofficial Anker Solix MQTT real-time data client for TypeScript",
   "keywords": [],
-  "author": "",
   "license": "MIT",
-  "type": "module",
-  "devDependencies": {
-    "@arethetypeswrong/core": "catalog:",
-    "publint": "catalog:",
-    "tsdown": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
-  },
-  "dependencies": {
-    "@lab759/solix-api": "workspace:",
-    "mqtt": "^5.15.1"
-  },
+  "author": "",
   "files": [
     "dist"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -42,8 +27,27 @@
       "./package.json": "./package.json"
     }
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsdown",
+    "build:watch": "tsdown --watch"
+  },
+  "dependencies": {
+    "@lab759/solix-api": "workspace:",
+    "mqtt": "^5.15.1"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/core": "catalog:",
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "publint": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
   "engines": {
     "node": ">=20"
   }

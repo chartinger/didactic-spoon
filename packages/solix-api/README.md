@@ -15,12 +15,12 @@ npm install @lab759/solix-api
 ## Usage
 
 ```ts
-import { AnkerSolixClient } from "@lab759/solix-api";
+import { AnkerSolixClient } from '@lab759/solix-api';
 
 const client = new AnkerSolixClient({
-  email: "you@example.com",
-  password: "your-password",
-  countryId: "DE",
+  email: 'you@example.com',
+  password: 'your-password',
+  countryId: 'DE',
 });
 
 // Get current status for the first available site and Solarbank device
@@ -45,7 +45,7 @@ for (const device of devices) {
 }
 
 // Get status for a specific site / device
-const status2 = await client.getCurrentStatus("your-site-id", "your-device-sn");
+const status2 = await client.getCurrentStatus('your-site-id', 'your-device-sn');
 console.log(status2);
 
 // Retrieve MQTT connection info for real-time data
@@ -57,10 +57,10 @@ console.log(mqttInfo);
 
 ### `new AnkerSolixClient(options)`
 
-| Option      | Type     | Description                            |
-| ----------- | -------- | -------------------------------------- |
-| `email`     | `string` | Your Anker account email               |
-| `password`  | `string` | Your Anker account password            |
+| Option      | Type     | Description                                           |
+| ----------- | -------- | ----------------------------------------------------- |
+| `email`     | `string` | Your Anker account email                              |
+| `password`  | `string` | Your Anker account password                           |
 | `countryId` | `string` | ISO 3166-1 alpha-2 country code (e.g. `"DE"`, `"US"`) |
 
 ### Methods
