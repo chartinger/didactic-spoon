@@ -28,12 +28,12 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.8",
     "@lab759/solix-api": "workspace:",
-    "@lab759/solix-mqtt": "workspace:"
+    "@lab759/solix-mqtt": "workspace:",
+    "tsdown": "catalog:"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
-    "mqtt": "^5.15.1",
-    "tsdown": "catalog:"
+    "mqtt": "^5.15.1"
   },
   "engines": {
     "node": ">=20"
