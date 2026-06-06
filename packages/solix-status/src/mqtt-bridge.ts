@@ -14,18 +14,42 @@ async function main(): Promise<void> {
 
   const TARGET_BROKER_HOST = process.env.TARGET_BROKER;
   const TARGET_TOPIC_DATA = process.env.TARGET_TOPIC_DATA;
+  const TARGET_TOPIC_POLL = process.env.TARGET_TOPIC_POLL;
 
-  if (!TARGET_BROKER_HOST || !TARGET_TOPIC_DATA) {
-    throw new Error('Set TARGET_BROKER and TARGET_TOPIC_DATA environment variables.');
+  if (!TARGET_BROKER_HOST || !TARGET_TOPIC_DATA || !TARGET_TOPIC_POLL) {
+    throw new Error('Set TARGET_BROKER, TARGET_TOPIC_DATA, and TARGET_TOPIC_POLL environment variables.');
   }
 
-  const targetMqttClient = connect(`mqtt://${TARGET_BROKER_HOST}`);
+  const targetMqttClient = connect(`mqtt://${TARGET_BROKER_HOST}`, { manualConnect: true });
 
   const client = new AnkerSolixClient(apiClientOptions);
   const solixMqttClient = new AnkerSolixMqttClient(client, { raw: showRaw });
 
   const initialStatus = await client.getCurrentStatus();
   targetMqttClient.publish(TARGET_TOPIC_DATA, JSON.stringify(initialStatus));
+
+  targetMqttClient.on('connect', () => {
+    console.log('Connected to target MQTT broker');
+    targetMqttClient.subscribe(TARGET_TOPIC_POLL, (err) => {
+      if (err) {
+        console.error('Failed to subscribe to poll topic:', err);
+      } else {
+        console.log(`Subscribed to poll topic: ${TARGET_TOPIC_POLL}`);
+      }
+    });
+  });
+
+  targetMqttClient.on('message', async (topic, message) => {
+    if (topic === TARGET_TOPIC_POLL) {
+      const messageStr = message.toString().trim().toLowerCase();
+      console.log('Received poll request:', messageStr);
+      try {
+        solixMqttClient.publishStatusRequest();
+      } catch (error) {
+        console.error('Failed to fetch current status:', error);
+      }
+    }
+  });
 
   solixMqttClient.on('message', (data) => {
     if (data.pn === 'A17C5' && data.msgType === '0408') {
@@ -62,6 +86,7 @@ async function main(): Promise<void> {
   });
 
   await solixMqttClient.connect();
+  targetMqttClient.connect();
 
   const exit = (code: number): void => {
     solixMqttClient.disconnect();
