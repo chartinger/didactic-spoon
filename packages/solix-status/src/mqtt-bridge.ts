@@ -13,10 +13,10 @@ async function main(): Promise<void> {
   };
 
   const TARGET_BROKER_HOST = process.env.TARGET_BROKER;
-  const TARGET_TOPIC = process.env.TARGET_TOPIC;
+  const TARGET_TOPIC_DATA = process.env.TARGET_TOPIC_DATA;
 
-  if (!TARGET_BROKER_HOST || !TARGET_TOPIC) {
-    throw new Error('Set TARGET_BROKER and TARGET_TOPIC environment variables.');
+  if (!TARGET_BROKER_HOST || !TARGET_TOPIC_DATA) {
+    throw new Error('Set TARGET_BROKER and TARGET_TOPIC_DATA environment variables.');
   }
 
   const targetMqttClient = connect(`mqtt://${TARGET_BROKER_HOST}`);
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   const solixMqttClient = new AnkerSolixMqttClient(client, { raw: showRaw });
 
   const initialStatus = await client.getCurrentStatus();
-  targetMqttClient.publish(TARGET_TOPIC, JSON.stringify(initialStatus));
+  targetMqttClient.publish(TARGET_TOPIC_DATA, JSON.stringify(initialStatus));
 
   solixMqttClient.on('message', (data) => {
     if (data.pn === 'A17C5' && data.msgType === '0408') {
@@ -41,7 +41,23 @@ async function main(): Promise<void> {
         outputWatts: Number(data.decoded?.charged_energy), // Needs verification
       };
       console.dir(deviceStatus, { depth: null });
-      targetMqttClient.publish(TARGET_TOPIC, JSON.stringify(deviceStatus));
+      targetMqttClient.publish(TARGET_TOPIC_DATA, JSON.stringify(deviceStatus));
+    }
+    if (data.pn === 'A17C5' && data.msgType === '0405') {
+      console.log('Received status 0405 message:', data);
+      const deviceStatus: DeviceStatus = {
+        siteId: '?',
+        deviceSn: data.sn,
+        batteryPercent: Number(data.decoded?.battery_soc),
+        panelInputWatts: Number(data.decoded?.photovoltaic_power),
+        pvInput1Watts: null,
+        pvInput2Watts: null,
+        pvInput3Watts: null,
+        pvInput4Watts: null,
+        outputWatts: Number(data.decoded?.charged_energy), // Needs verification
+      };
+      console.dir(deviceStatus, { depth: null });
+      targetMqttClient.publish(TARGET_TOPIC_DATA, JSON.stringify(deviceStatus));
     }
   });
 

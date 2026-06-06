@@ -82,6 +82,12 @@ export interface MqttInfo {
   caCert: string;
   clientCert: string;
   clientKey: string;
+  /** Anker account user id (from MQTT info response). */
+  userId: string;
+  /** App name, e.g. "anker_power" (from MQTT info response). */
+  appName: string;
+  /** Certificate id (from MQTT info response). */
+  certificateId: string;
 }
 
 export class AnkerSolixClient {
@@ -131,6 +137,19 @@ export class AnkerSolixClient {
     return this.request<JsonObject>(ENDPOINTS.sceneInfo, { site_id: siteId });
   }
 
+  /**
+   * Extract the Anker Solix product code from a device serial number.
+   * Matches the Python library's get_solix_product_code().
+   * - 16-digit SN: characters 4-6 (index 3-5, 3 chars)
+   * - 17-digit SN: characters 4-7 (index 3-6, 4 chars)
+   */
+  private static getProductCodeFromSn(sn: string): string {
+    const s = sn.trim();
+    if (s.length === 16) return s.slice(3, 6);
+    if (s.length === 17) return s.slice(3, 7);
+    return '';
+  }
+
   public async getSiteDevices(): Promise<SiteDevice[]> {
     const sites = await this.getSiteList();
     const devices: SiteDevice[] = [];
@@ -138,15 +157,29 @@ export class AnkerSolixClient {
       const siteId = site.site_id;
       if (!siteId) continue;
       const scene = await this.getSceneInfo(siteId);
-      const solarbankInfo = asObject(scene.solarbank_info);
-      const solarbankList = Array.isArray(solarbankInfo.solarbank_list)
-        ? (solarbankInfo.solarbank_list as JsonObject[])
-        : [];
-      for (const device of solarbankList) {
-        const deviceSn = String(device.device_sn ?? '');
-        const productCode = String(device.product_code ?? '');
-        if (deviceSn) {
-          devices.push({ siteId, deviceSn, productCode });
+
+      // Collect devices from all known lists in the scene info
+      const deviceLists: JsonObject[][] = [];
+      for (const key of ['solarbank_info', 'pps_info']) {
+        const info = asObject(scene[key]);
+        for (const listKey of ['solarbank_list', 'pps_list']) {
+          const list = info[listKey];
+          if (Array.isArray(list)) deviceLists.push(list as JsonObject[]);
+        }
+      }
+
+      for (const list of deviceLists) {
+        for (const device of list) {
+          const deviceSn = String(device.device_sn ?? '');
+          // Scene info entries use "device_pn"; bind devices use "product_code"
+          let productCode = String(device.device_pn ?? device.product_code ?? '');
+          // Fallback: extract product code from serial number (Python reference)
+          if (!productCode && deviceSn) {
+            productCode = AnkerSolixClient.getProductCodeFromSn(deviceSn);
+          }
+          if (deviceSn) {
+            devices.push({ siteId, deviceSn, productCode });
+          }
         }
       }
     }
@@ -179,10 +212,13 @@ export class AnkerSolixClient {
     const clientKey = String(
       data.private_key ?? data.client_private_key ?? data.client_key ?? data.clientKey ?? '',
     );
+    const userId = String(data.user_id ?? '');
+    const appName = String(data.app_name ?? 'anker_power');
+    const certificateId = String(data.certificate_id ?? '');
     if (!brokerHost || !caCert || !clientCert || !clientKey) {
       throw new Error('Incomplete MQTT credentials returned by API.');
     }
-    return { brokerHost, brokerPort, clientId, caCert, clientCert, clientKey };
+    return { brokerHost, brokerPort, clientId, caCert, clientCert, clientKey, userId, appName, certificateId };
   }
 
   public getSessionTokens(): { token: string | null; gtoken: string | null } {

@@ -93,10 +93,10 @@ Same as the MQTT stream, but also publishes device status updates to a **second 
 
 Requires these additional environment variables:
 
-| Variable        | Description                                            |
-| --------------- | ------------------------------------------------------ |
-| `TARGET_BROKER` | Host of the target MQTT broker (e.g. `localhost:1883`) |
-| `TARGET_TOPIC`  | MQTT topic to publish status JSON to                   |
+| Variable            | Description                                            |
+| ------------------- | ------------------------------------------------------ |
+| `TARGET_BROKER`     | Host of the target MQTT broker (e.g. `localhost:1883`) |
+| `TARGET_TOPIC_DATA` | MQTT topic to publish status JSON to                   |
 
 On startup it publishes an initial snapshot from the REST API, then streams real-time updates as they arrive over MQTT.
 

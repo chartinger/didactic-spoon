@@ -3,8 +3,26 @@ import { AnkerSolixMqttClient } from '@lab759/solix-mqtt';
 import 'dotenv/config';
 import { loadAuthInfo, saveAuthTokensToCache } from './auth.js';
 
+function parseArgs(): { raw: boolean; trigger: boolean; statusRequest: boolean; triggerTimeout: number; triggerSn: string | undefined } {
+  const args = process.argv.slice(2);
+  let triggerTimeout = 300;
+  let triggerSn: string | undefined;
+  const raw = args.includes('--raw');
+  const trigger = args.includes('--trigger');
+  const statusRequest = args.includes('--status-request');
+  const timeoutIdx = args.indexOf('--trigger-timeout');
+  if (timeoutIdx !== -1 && timeoutIdx + 1 < args.length) {
+    triggerTimeout = Number(args[timeoutIdx + 1]);
+  }
+  const snIdx = args.indexOf('--device-sn');
+  if (snIdx !== -1 && snIdx + 1 < args.length) {
+    triggerSn = args[snIdx + 1];
+  }
+  return { raw, trigger, statusRequest, triggerTimeout, triggerSn };
+}
+
 async function main(): Promise<void> {
-  const showRaw = process.argv.includes('--raw');
+  const { raw, trigger, statusRequest, triggerTimeout, triggerSn } = parseArgs();
 
   const apiClientOptions: AnkerClientOptions = {
     ...loadAuthInfo(),
@@ -12,7 +30,7 @@ async function main(): Promise<void> {
   };
 
   const client = new AnkerSolixClient(apiClientOptions);
-  const mqttClient = new AnkerSolixMqttClient(client, { raw: showRaw });
+  const mqttClient = new AnkerSolixMqttClient(client, { raw });
 
   mqttClient.on('message', (data) => {
     const timestamp = new Date().toISOString();
@@ -42,6 +60,21 @@ async function main(): Promise<void> {
   });
 
   await mqttClient.connect();
+
+  // Publish commands after a short delay so subscriptions are registered.
+  if (trigger) {
+    setTimeout(() => {
+      process.stderr.write(`Publishing realtime trigger (timeout=${triggerTimeout}s)…\n`);
+      mqttClient.publishRealtimeTrigger(triggerTimeout, triggerSn);
+    }, 1_000);
+  }
+
+  if (statusRequest) {
+    setTimeout(() => {
+      process.stderr.write('Publishing status request…\n');
+      mqttClient.publishStatusRequest(triggerSn);
+    }, 1_000);
+  }
 
   const exit = (code: number): void => {
     mqttClient.disconnect();

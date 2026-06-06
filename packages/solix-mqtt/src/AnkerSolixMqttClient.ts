@@ -1,4 +1,4 @@
-import type { AnkerSolixClient } from '@lab759/solix-api';
+import type { AnkerSolixClient, MqttInfo, SiteDevice } from '@lab759/solix-api';
 import EventEmitter from 'node:events';
 import { connect } from 'mqtt';
 import type { FieldMap } from './mqtt-packet.js';
@@ -50,12 +50,191 @@ export type AnkerSolixMqttClientOptions = {
 
 export class AnkerSolixMqttClient extends EventEmitter<Events> {
   private mqttClient: ReturnType<typeof connect> | null = null;
+  private devices: SiteDevice[] = [];
+  private mqttInfo: MqttInfo | null = null;
 
   constructor(
     private apiClient: AnkerSolixClient,
     private options: AnkerSolixMqttClientOptions = { raw: false },
   ) {
     super();
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Command helpers
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Build the binary payload for an MQTT command to an Anker Solix device.
+   *
+   * Packet structure:
+   *   ff 09          2B marker
+   *   XX XX          2B total length LE (marker + length field + ... + fields)
+   *   03 00 0f       3B fixed pattern
+   *   XX XX          2B message type
+   *   [fields…]      variable
+   *   XX             1B XOR checksum
+   */
+  private static buildCommandPayload(msgType: string, fields: Buffer[]): Buffer {
+    const fieldData = Buffer.concat(fields);
+
+    // Pattern + msg type + fields
+    const body = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x0f]),
+      Buffer.from(msgType, 'hex'),
+      fieldData,
+    ]);
+
+    // total length = marker(2) + length-field(2) + body length
+    const totalLength = 2 + 2 + body.length;
+
+    const packet = Buffer.concat([
+      Buffer.from([0xff, 0x09]),
+      Buffer.alloc(2),
+      body,
+    ]);
+    packet.writeUInt16LE(totalLength, 2);
+
+    // XOR checksum over all bytes
+    let checksum = 0;
+    for (const b of packet) {
+      checksum ^= b;
+    }
+    return Buffer.concat([packet, Buffer.from([checksum])]);
+  }
+
+  /** Encode a field: [fieldId, length, type?, value…] */
+  private static encodeField(id: number, type: number | undefined, value: Buffer): Buffer {
+    const header = [id];
+    // Length = type byte (if present) + value bytes
+    const len = (type !== undefined ? 1 : 0) + value.length;
+    header.push(len);
+    if (type !== undefined) header.push(type);
+    return Buffer.concat([Buffer.from(header), value]);
+  }
+
+  /** Build the hex payload for a `realtime_trigger` command (message type 0057). */
+  private static realtimeTriggerPayload(timeoutSec: number): string {
+    const now = Math.floor(Date.now() / 1000);
+    const fields = [
+      // a1 field: fixed marker (a1 01 22)
+      Buffer.from('a10122', 'hex'),
+      // a2 field: enable trigger (a2 02 01 01 = on)
+      Buffer.from('a2020101', 'hex'),
+      // a3 field: timeout as 4-byte LE var (a3 05 03 + timeout)
+      AnkerSolixMqttClient.encodeField(0xa3, 0x03, Buffer.alloc(4)),
+      // fe field: unix timestamp as 4-byte LE var (fe 05 03 + timestamp)
+      AnkerSolixMqttClient.encodeField(0xfe, 0x03, Buffer.alloc(4)),
+    ];
+    fields[2].writeUInt32LE(timeoutSec, 3); // offset 3 = after a3/05/03
+    fields[3].writeUInt32LE(now, 3);         // offset 3 = after fe/05/03
+    return AnkerSolixMqttClient.buildCommandPayload('0057', fields).toString('hex');
+  }
+
+  /** Build the hex payload for a `status_request` command (message type 0040). */
+  private static statusRequestPayload(): string {
+    const now = Math.floor(Date.now() / 1000);
+    const fields = [
+      // a1 field: fixed marker (a1 01 22)
+      Buffer.from('a10122', 'hex'),
+      // fe field: unix timestamp as 4-byte LE var
+      AnkerSolixMqttClient.encodeField(0xfe, 0x03, Buffer.alloc(4)),
+    ];
+    fields[1].writeUInt32LE(now, 3);
+    return AnkerSolixMqttClient.buildCommandPayload('0040', fields).toString('hex');
+  }
+
+  /**
+   * Publish a `realtime_trigger` command for one or all devices.
+   *
+   * This tells the device to start sending real-time status messages at
+   * ~3–5 second intervals. The stream stops after `timeout` seconds.
+   *
+   * @param timeout  Duration in seconds (30–600, default 300).
+   * @param deviceSn Optional serial. If omitted, triggers all known devices.
+   */
+  public publishRealtimeTrigger(timeout = 300, deviceSn?: string): void {
+    this.publishCommand(
+      () => AnkerSolixMqttClient.realtimeTriggerPayload(timeout),
+      deviceSn,
+    );
+  }
+
+  /**
+   * Publish a `status_request` command for one or all devices.
+   *
+   * This is a one-shot request — the device responds immediately with its
+   * current status. Useful for devices like smart plugs that don't support
+   * continuous realtime triggers.
+   *
+   * @param deviceSn Optional serial. If omitted, requests all known devices.
+   */
+  public publishStatusRequest(deviceSn?: string): void {
+    this.publishCommand(
+      () => AnkerSolixMqttClient.statusRequestPayload(),
+      deviceSn,
+    );
+  }
+
+  private publishCommand(
+    buildHex: (device: SiteDevice) => string,
+    deviceSn?: string,
+  ): void {
+    const mqttClient = this.mqttClient;
+    const mqttInfo = this.mqttInfo;
+    if (!mqttClient || !mqttInfo) {
+      process.stderr.write('Cannot publish command: not connected.\n');
+      return;
+    }
+
+    const targets = deviceSn
+      ? this.devices.filter((d) => d.deviceSn === deviceSn)
+      : this.devices;
+
+    const now = Math.floor(Date.now() / 1000);
+
+    for (const device of targets) {
+      const productCode = device.productCode || '+';
+      const topic = `cmd/${mqttInfo.appName}/${productCode}/${device.deviceSn}/req`;
+      const hex = buildHex(device);
+      const hexBytes = Buffer.from(hex, 'hex');
+
+      // Python reference (api/mqtt.py :: publish):
+      //   head.client_id = f"android-{app_name}-{user_id}-{certificate_id}"
+      //   payload = json.dumps({ device_sn, account_id, data: b64encode(hexbytes) })
+      const message = JSON.stringify({
+        head: {
+          version: '1.0.0.1',
+          client_id: `android-${mqttInfo.appName}-${mqttInfo.userId}-${mqttInfo.certificateId}`,
+          cmd: 17,
+          sessId: '1234-5678',
+          sess_id: '1234-5678',
+          msg_seq: 1,
+          seed: 1,
+          timestamp: now,
+          cmd_status: 2,
+          sign_code: 1,
+          device_pn: productCode,
+          device_sn: device.deviceSn,
+        },
+        payload: JSON.stringify({
+          device_sn: device.deviceSn,
+          account_id: mqttInfo.userId,
+          data: hexBytes.toString('base64'),
+        }),
+      });
+
+      process.stderr.write(`Publishing to ${topic}\n`);
+      process.stderr.write(`Payload (first 200 chars): ${message.slice(0, 200)}…\n`);
+
+      mqttClient.publish(topic, message, { qos: 0 }, (err) => {
+        if (err) {
+          process.stderr.write(`Publish error on ${topic}: ${String(err)}\n`);
+        } else {
+          process.stderr.write(`Published to ${topic} (puback received)\n`);
+        }
+      });
+    }
   }
 
   public async connect(): Promise<void> {
@@ -71,6 +250,8 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
     if (devices.length === 0) {
       throw new Error('No devices found for this account.');
     }
+    this.devices = devices;
+    this.mqttInfo = mqttInfo;
 
     const brokerUrl = `mqtts://${mqttInfo.brokerHost}:${mqttInfo.brokerPort}`;
     process.stderr.write(`Connecting to ${brokerUrl}…\n`);
@@ -170,12 +351,24 @@ export class AnkerSolixMqttClient extends EventEmitter<Events> {
       process.stderr.write(`MQTT error: ${err.message}\n`);
     });
 
-    mqttClient.on('close', () => {
-      process.stderr.write('Connection closed.\n');
+    mqttClient.on('disconnect', (packet?: unknown) => {
+      process.stderr.write(`MQTT disconnect (from broker): ${JSON.stringify(packet)}\n`);
+    });
+
+    mqttClient.on('close', (err?: Error) => {
+      if (err) {
+        process.stderr.write(`MQTT connection closed with error: ${err.message}\n`);
+      } else {
+        process.stderr.write('MQTT connection closed.\n');
+      }
+    });
+
+    mqttClient.on('offline', () => {
+      process.stderr.write('MQTT client went offline.\n');
     });
 
     mqttClient.on('reconnect', () => {
-      console.error('Skipping MQTT reconnect - closing client.');
+      process.stderr.write('MQTT trying to reconnect - skipping.\n');
       mqttClient.end();
     });
   }

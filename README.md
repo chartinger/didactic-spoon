@@ -76,10 +76,10 @@ pnpm bridge [--raw]
 
 Same as the MQTT stream, but also publishes parsed device status to a **second MQTT broker** (e.g. a local Home Assistant MQTT instance). Requires these additional environment variables:
 
-| Variable        | Description                                            |
-| --------------- | ------------------------------------------------------ |
-| `TARGET_BROKER` | Host of the target MQTT broker (e.g. `localhost:1883`) |
-| `TARGET_TOPIC`  | MQTT topic to publish status updates to                |
+| Variable            | Description                                            |
+| ------------------- | ------------------------------------------------------ |
+| `TARGET_BROKER`     | Host of the target MQTT broker (e.g. `localhost:1883`) |
+| `TARGET_TOPIC_DATA` | MQTT topic to publish status updates to                |
 
 ## Output example (REST API)
 
