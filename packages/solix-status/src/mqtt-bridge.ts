@@ -43,9 +43,24 @@ async function main(): Promise<void> {
 
   targetMqttClient.on('message', async (topic, message) => {
     if (topic === TARGET_TOPIC_POLL) {
-      const messageStr = message.toString().trim().toLowerCase();
-      console.log('Received poll request:', messageStr);
+      const messageStr = message.toString().trim();
       try {
+        console.log('Received poll request:', messageStr);
+        const requestData = JSON.parse(messageStr);
+        if (requestData?.type === 'realtime') {
+          console.log('Publishing realtime trigger');
+          try {
+            solixMqttClient.publishRealtimeTrigger();
+          } catch (error) {
+            console.error('Failed to fetch realtime data:', error);
+          }
+          return;
+        }
+      } catch {
+        console.warn('Received non-JSON poll message, using legacy fallback');
+      }
+      try {
+        console.log('Publishing status request');
         solixMqttClient.publishStatusRequest();
       } catch (error) {
         console.error('Failed to fetch current status:', error);
@@ -70,7 +85,6 @@ async function main(): Promise<void> {
       targetMqttClient.publish(TARGET_TOPIC_DATA, JSON.stringify(deviceStatus));
     }
     if (data.pn === 'A17C5' && data.msgType === '0405') {
-      console.log('Received status 0405 message:', data);
       const deviceStatus: DeviceStatus = {
         siteId: '?',
         deviceSn: data.sn,
