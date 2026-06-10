@@ -17,7 +17,9 @@ async function main(): Promise<void> {
   const TARGET_TOPIC_POLL = process.env.TARGET_TOPIC_POLL;
 
   if (!TARGET_BROKER_HOST || !TARGET_TOPIC_DATA || !TARGET_TOPIC_POLL) {
-    throw new Error('Set TARGET_BROKER, TARGET_TOPIC_DATA, and TARGET_TOPIC_POLL environment variables.');
+    throw new Error(
+      'Set TARGET_BROKER, TARGET_TOPIC_DATA, and TARGET_TOPIC_POLL environment variables.',
+    );
   }
 
   const targetMqttClient = connect(`mqtt://${TARGET_BROKER_HOST}`, { manualConnect: true });

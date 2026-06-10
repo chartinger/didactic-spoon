@@ -218,7 +218,17 @@ export class AnkerSolixClient {
     if (!brokerHost || !caCert || !clientCert || !clientKey) {
       throw new Error('Incomplete MQTT credentials returned by API.');
     }
-    return { brokerHost, brokerPort, clientId, caCert, clientCert, clientKey, userId, appName, certificateId };
+    return {
+      brokerHost,
+      brokerPort,
+      clientId,
+      caCert,
+      clientCert,
+      clientKey,
+      userId,
+      appName,
+      certificateId,
+    };
   }
 
   public getSessionTokens(): { token: string | null; gtoken: string | null } {

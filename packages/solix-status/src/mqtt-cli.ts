@@ -3,7 +3,13 @@ import { AnkerSolixMqttClient } from '@lab759/solix-mqtt';
 import 'dotenv/config';
 import { loadAuthInfo, saveAuthTokensToCache } from './auth.js';
 
-function parseArgs(): { raw: boolean; trigger: boolean; statusRequest: boolean; triggerTimeout: number; triggerSn: string | undefined } {
+function parseArgs(): {
+  raw: boolean;
+  trigger: boolean;
+  statusRequest: boolean;
+  triggerTimeout: number;
+  triggerSn: string | undefined;
+} {
   const args = process.argv.slice(2);
   let triggerTimeout = 300;
   let triggerSn: string | undefined;
